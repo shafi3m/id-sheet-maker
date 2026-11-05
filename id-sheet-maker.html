@@ -1,0 +1,5846 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <style>
+      body {
+        margin: 0;
+      }
+      img {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <title>ID Sheet Maker</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
+    <style>
+      /* Layout: one column of three numbered steps on phones; on wide screens steps 1–2 on the left, the sheet and export on the right (sticky) */
+      :root {
+        color-scheme: dark;
+        --bg: #111b18;
+        --panel: #19231f;
+        --panel2: #202b26;
+        --fg: #e8f0eb;
+        --muted: #9baaa1;
+        --line: #2b3a33;
+        --line2: #36473f;
+        --accent: #55c98a;
+        --accent-fg: #0b1a12;
+        --accent-soft: rgba(85, 201, 138, 0.14);
+        --ok: #55c98a;
+        --warn: #e3b55b;
+        --bad: #e57f72;
+        --ok-bg: rgba(85, 201, 138, 0.13);
+        --warn-bg: rgba(227, 181, 91, 0.14);
+        --bad-bg: rgba(229, 127, 114, 0.14);
+        --sheet: #ffffff;
+        --scrim: rgba(4, 8, 6, 0.72);
+        --wa: #55c98a;
+        --focus: #8fe3b5;
+        --r: 12px;
+        --r-sm: 8px;
+        --sans:
+          "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--sans);
+        font-size: 15px;
+        line-height: 1.5;
+        -webkit-tap-highlight-color: transparent;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      .label {
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      /* ---------- app shell ---------- */
+      .app {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding-block: 16px 48px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 16px;
+      }
+      .topbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .brand svg {
+        flex: none;
+      }
+      .app h1 {
+        font-size: 19px;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      .brand p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+      .privacy {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--accent);
+        background: var(--accent-soft);
+        padding: 4px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      @media (max-width: 560px) {
+        .privacy {
+          margin-left: 0;
+        }
+      }
+      .cols {
+        display: grid;
+        gap: 16px;
+        align-items: start;
+      }
+      @media (min-width: 1024px) {
+        .cols {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+        }
+        .cols > .right {
+          position: sticky;
+          top: 16px;
+        }
+      }
+      .stack {
+        display: grid;
+        gap: 16px;
+        min-width: 0;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        padding: 16px;
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+      }
+      @media (max-width: 480px) {
+        .card {
+          padding: 14px;
+          border-radius: 10px;
+        }
+      }
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+      }
+      .step .n {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-radius: 6px;
+        padding: 2px 7px;
+        font-variant-numeric: tabular-nums;
+      }
+      .step h2 {
+        font-size: 17px;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.005em;
+      }
+      .step .meta {
+        margin-left: auto;
+        font-size: 13px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      /* ---------- buttons ---------- */
+      .app .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 16px;
+        white-space: nowrap;
+        border-radius: 10px;
+        border: 1px solid var(--line2);
+        background: var(--panel2);
+        color: var(--fg);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        transition:
+          background-color 0.15s,
+          border-color 0.15s,
+          transform 0.08s,
+          opacity 0.15s;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .app .btn:hover {
+        border-color: #4a5f55;
+        background: #26332d;
+      }
+      .app .btn:active {
+        transform: scale(0.98);
+      }
+      .app .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .app .btn svg {
+        width: 18px;
+        height: 18px;
+        flex: none;
+      }
+      .app .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-fg);
+        font-weight: 600;
+      }
+      .app .btn-primary:hover {
+        background: #68d49a;
+        border-color: #68d49a;
+      }
+      .app .btn-wa {
+        background: transparent;
+        border-color: var(--wa);
+        color: var(--wa);
+        font-weight: 600;
+      }
+      .app .btn-wa:hover {
+        background: var(--accent-soft);
+        border-color: var(--wa);
+      }
+      .app .btn-ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--muted);
+      }
+      .app .btn-ghost:hover {
+        background: var(--panel2);
+        border-color: transparent;
+        color: var(--fg);
+      }
+      .app .btn-sm {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 13px;
+        border-radius: 8px;
+      }
+      .app .btn input[type="file"] {
+        display: none;
+      }
+      .app :focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .icon-btn {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid var(--line2);
+        background: rgba(17, 27, 24, 0.88);
+        color: var(--muted);
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          background-color 0.15s,
+          border-color 0.15s;
+      }
+      .icon-btn::after {
+        content: "";
+        position: absolute;
+        inset: -6px;
+      } /* 46px touch target, 34px visual */
+      .icon-btn:hover {
+        color: var(--bad);
+        border-color: var(--bad);
+        background: #2a1e1c;
+      }
+      .icon-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .icon-btn.save:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      [data-tip] {
+        --tip: attr(data-tip);
+      }
+      @media (hover: hover) {
+        .icon-btn[data-tip]:hover::before {
+          content: attr(data-tip);
+          position: absolute;
+          right: 0;
+          top: calc(100% + 6px);
+          white-space: nowrap;
+          font-size: 12px;
+          color: var(--fg);
+          background: #0b1210;
+          border: 1px solid var(--line2);
+          padding: 3px 8px;
+          border-radius: 6px;
+          z-index: 5;
+          pointer-events: none;
+        }
+      }
+
+      /* ---------- step 1: upload ---------- */
+      .drop {
+        position: relative;
+        border: 1.5px dashed var(--line2);
+        border-radius: var(--r);
+        padding: 22px 16px;
+        display: grid;
+        gap: 10px;
+        justify-items: center;
+        text-align: center;
+        background: linear-gradient(var(--panel2), var(--panel2)) padding-box;
+        transition:
+          border-color 0.15s,
+          background-color 0.15s;
+      }
+      .drop.over {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+      .drop .ico {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .drop strong {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .drop .fmts {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .drop .fmts span {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        border: 1px solid var(--line2);
+        border-radius: 5px;
+        padding: 1px 6px;
+      }
+      .drop.busy .ico {
+        animation: pulse 1.1s ease-in-out infinite;
+      }
+      .progress {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: var(--fg);
+      }
+      .spin {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--line2);
+        border-top-color: var(--accent);
+        animation: spin 0.8s linear infinite;
+        flex: none;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.55;
+        }
+      }
+      .pw {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border-radius: var(--r-sm);
+        background: var(--warn-bg);
+        border: 1px solid rgba(227, 181, 91, 0.35);
+      }
+      .pw label {
+        font-size: 14px;
+      }
+      .pw .inrow {
+        display: flex;
+        gap: 8px;
+      }
+      .inp {
+        font: inherit;
+        font-size: 15px;
+        min-height: 44px;
+        padding: 0 12px;
+        border: 1px solid var(--line2);
+        border-radius: 10px;
+        background: #141e1a;
+        color: var(--fg);
+        width: 100%;
+        min-width: 0;
+        transition: border-color 0.15s;
+      }
+      .inp:focus {
+        border-color: var(--accent);
+        outline: none;
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      .tray {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+        gap: 10px;
+      }
+      @media (max-width: 400px) {
+        .tray {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+      }
+      .tile {
+        position: relative;
+        display: grid;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 10px;
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        min-width: 0;
+      }
+      .tile.new {
+        animation: rise 0.18s ease-out;
+      }
+      .tile.unused .tthumb {
+        opacity: 0.55;
+      }
+      .tthumb {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4/3;
+        border-radius: 6px;
+        background: #0f1714;
+        object-fit: contain;
+      }
+      .tile .tname {
+        font-size: 13px;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tile .tsub {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.3;
+        min-height: 1.3em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tile select {
+        font: inherit;
+        font-size: 13px;
+        width: 100%;
+        min-height: 40px;
+        padding: 0 8px;
+        border: 1px solid var(--line2);
+        border-radius: 8px;
+        background: #141e1a;
+        color: var(--fg);
+      }
+      .tile .icon-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* ---------- step 2: document cards ---------- */
+      .slots {
+        display: grid;
+        gap: 10px;
+      }
+      @media (min-width: 640px) and (max-width: 1023px) {
+        .slots {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      .slot {
+        position: relative;
+        display: grid;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 10px;
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        transition: border-color 0.2s;
+      }
+      .slot.missing {
+        border-style: dashed;
+      }
+      .slot .top {
+        display: grid;
+        grid-template-columns: 104px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+        padding-right: 36px;
+      }
+      @media (max-width: 380px) {
+        .slot .top {
+          grid-template-columns: 84px minmax(0, 1fr);
+        }
+      }
+      .sthumb {
+        width: 100%;
+        aspect-ratio: 4/3;
+        border-radius: 6px;
+        background: #0f1714;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        color: var(--muted);
+      }
+      .sthumb canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .slot h3 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .slot .pos {
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 2px;
+      }
+      .slot .pos svg {
+        width: 14px;
+        height: 14px;
+      }
+      .slot .src {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        line-height: 1.35;
+        padding: 2px 8px;
+        border-radius: 999px;
+        transition:
+          background-color 0.2s,
+          color 0.2s;
+      }
+      .chip::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        flex: none;
+      }
+      .chip.ok {
+        background: var(--ok-bg);
+        color: var(--ok);
+      }
+      .chip.warn {
+        background: var(--warn-bg);
+        color: var(--warn);
+      }
+      .chip.bad {
+        background: var(--bad-bg);
+        color: var(--bad);
+      }
+      .slot .acts {
+        display: flex;
+        gap: 8px;
+      }
+      .slot .acts .btn {
+        flex: 1;
+        padding: 0 10px;
+        gap: 6px;
+        min-width: 0;
+      }
+      .slot .acts .icon-btn {
+        flex: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: var(--panel2);
+      }
+      .slot .acts .icon-btn::after {
+        inset: 0;
+      }
+      .slot > .icon-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+      }
+      .alts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .alts .label {
+        width: 100%;
+      }
+      .alt {
+        border: 2px solid transparent;
+        border-radius: 6px;
+        padding: 0;
+        background: none;
+        line-height: 0;
+        cursor: pointer;
+      }
+      .alt.sel {
+        border-color: var(--accent);
+      }
+      .alt canvas {
+        width: 68px;
+        height: auto;
+        border-radius: 4px;
+      }
+
+      /* ---------- step 3: sheet, name, checks, export ---------- */
+      .sheetbox {
+        border-radius: 10px;
+        padding: 10px;
+        background: #0d1512;
+        border: 1px solid var(--line);
+      }
+      #sheet {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 297/210;
+        display: block;
+        background: var(--sheet);
+        border-radius: 3px;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.08),
+          0 6px 18px rgba(0, 0, 0, 0.35);
+      }
+      .sheetcap {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 8px;
+        font-variant-numeric: tabular-nums;
+      }
+      .fields {
+        display: grid;
+        gap: 12px;
+      }
+      @media (min-width: 640px) {
+        .fields {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+      }
+      .field > label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+      .inrow {
+        display: flex;
+        gap: 8px;
+        min-width: 0;
+      }
+      #name {
+        font-family: var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+      #fileName {
+        font-family: var(--mono);
+      }
+      .field .hint {
+        min-height: 1.2em;
+      }
+      .field .hint.ok {
+        color: var(--ok);
+      }
+      ul.checks {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 2px;
+      }
+      ul.checks li {
+        display: grid;
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        padding: 8px 4px;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+      }
+      ul.checks li:last-child {
+        border-bottom: 0;
+      }
+      ul.checks .dot {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        margin-top: 1px;
+      }
+      ul.checks .dot svg {
+        width: 13px;
+        height: 13px;
+      }
+      ul.checks .ok .dot {
+        background: var(--ok-bg);
+        color: var(--ok);
+      }
+      ul.checks .warn .dot {
+        background: var(--warn-bg);
+        color: var(--warn);
+      }
+      ul.checks .bad .dot {
+        background: var(--bad-bg);
+        color: var(--bad);
+      }
+      ul.checks .t {
+        font-weight: 500;
+      }
+      ul.checks .d {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .ai {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--panel2);
+        border: 1px solid var(--line);
+      }
+      .ai .hint {
+        flex: 1 1 220px;
+      }
+      .faces {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+      }
+      .faces figure {
+        margin: 0;
+        display: grid;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .faces canvas {
+        height: 84px;
+        width: auto;
+        border-radius: 6px;
+        background: #0f1714;
+      }
+      label.confirm {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 14px;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      label.confirm input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--accent);
+        flex: none;
+      }
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+      @media (min-width: 640px) {
+        .actions {
+          grid-template-columns: 1fr 1fr;
+        }
+        .actions .btn-ghost {
+          grid-column: 1/-1;
+          justify-self: center;
+        }
+      }
+      .actions .btn {
+        width: 100%;
+      }
+      @media (min-width: 640px) {
+        .actions .btn-ghost {
+          width: auto;
+        }
+      }
+      .confirmbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--bad-bg);
+        border: 1px solid rgba(229, 127, 114, 0.35);
+        font-size: 14px;
+        animation: rise 0.15s ease-out;
+      }
+      .confirmbar span {
+        flex: 1 1 200px;
+      }
+      .status {
+        font-size: 13px;
+        color: var(--muted);
+        min-height: 1.3em;
+      }
+      .status.ok {
+        color: var(--ok);
+      }
+      .status.bad {
+        color: var(--bad);
+      }
+      .notebox {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .note {
+        flex: 1;
+        min-width: 0;
+        font-family: var(--mono);
+        font-size: 13px;
+        background: #141e1a;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        overflow-wrap: anywhere;
+      }
+      details.more {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+      }
+      details.more summary {
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--muted);
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        transform: translateX(-50%);
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        max-width: calc(100vw - 32px);
+        padding: 8px 8px 8px 16px;
+        border-radius: 12px;
+        background: #0b1210;
+        border: 1px solid var(--line2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        font-size: 14px;
+        animation: rise 0.18s ease-out;
+      }
+      .toast span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .toast .btn {
+        min-height: 36px;
+        color: var(--accent);
+      }
+
+      /* crop editor: a dark, image-first workspace. Phone = full screen, result as a floating thumbnail; desktop = workspace + side panel */
+      .editor {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        background: var(--scrim);
+        display: grid;
+        place-items: center;
+        overscroll-behavior: none;
+        --ws: #151a19;
+        --ws-line: rgba(255, 255, 255, 0.14);
+        --ws-fg: #e9efed;
+        --ws-muted: #a4b0ab;
+        --crop: #ffffff;
+        --crop-active: #5cc8ff;
+        --shade: rgba(6, 10, 9, 0.62);
+      }
+      .ed {
+        background: var(--ws);
+        color: var(--ws-fg);
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      @media (min-width: 900px) {
+        .ed {
+          width: min(1240px, 96vw);
+          height: min(880px, 94vh);
+          border-radius: 12px;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+        }
+      }
+      .edhead {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 8px;
+        padding-block: calc(8px + env(safe-area-inset-top, 0px)) 8px;
+        padding-left: max(12px, env(safe-area-inset-left, 0px));
+        padding-right: max(12px, env(safe-area-inset-right, 0px));
+        border-bottom: 1px solid var(--ws-line);
+      }
+      @media (min-width: 900px) {
+        .edhead {
+          padding-block: 10px;
+        }
+      }
+      .edhead strong {
+        font-size: 15px;
+        font-weight: 600;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .edhead .end {
+        justify-self: end;
+      }
+      .ed button {
+        font: inherit;
+        font-size: 14px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .ghost {
+        background: transparent;
+        color: var(--ws-fg);
+        border: 1px solid transparent;
+        padding: 8px 10px;
+      }
+      .ghost:hover {
+        border-color: var(--ws-line);
+      }
+      .apply {
+        background: var(--crop-active);
+        color: #04141c;
+        border: 0;
+        font-weight: 700;
+        padding: 8px 16px;
+      }
+      .edmain {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        min-height: 0;
+      }
+      @media (min-width: 900px) {
+        .edmain {
+          grid-template-columns: minmax(0, 1fr) 300px;
+        }
+      }
+      .work {
+        position: relative;
+        min-height: 0;
+        overflow: hidden;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
+      #edCanvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        outline: none;
+      }
+      #edCanvas.kb:focus {
+        box-shadow: inset 0 0 0 2px var(--crop-active);
+      }
+      @media (max-height: 520px) {
+        .edhead {
+          padding-block: calc(4px + env(safe-area-inset-top, 0px)) 4px;
+        }
+        .ed button {
+          font-size: 13px;
+        }
+        .ghost,
+        .apply {
+          padding: 6px 12px;
+        }
+        .tools {
+          padding-block: 2px calc(2px + env(safe-area-inset-bottom, 0px));
+        }
+        .tools button,
+        .tools label {
+          font-size: 0;
+          gap: 0;
+          padding: 6px;
+        }
+        .loupe {
+          width: 104px;
+          height: 104px;
+        }
+      }
+      .loupe {
+        position: absolute;
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 3px #fff,
+          0 6px 24px rgba(0, 0, 0, 0.55);
+        pointer-events: none;
+        z-index: 3;
+        transition:
+          left 0.18s,
+          top 0.18s;
+      }
+      .pip {
+        position: absolute;
+        margin: 0;
+        z-index: 2;
+        background: #0c100f;
+        border-radius: 8px;
+        padding: 4px;
+        box-shadow:
+          0 0 0 1px var(--ws-line),
+          0 6px 20px rgba(0, 0, 0, 0.5);
+        transition:
+          left 0.18s,
+          top 0.18s,
+          opacity 0.15s;
+        cursor: pointer;
+        line-height: 0;
+      }
+      .pip canvas {
+        display: block;
+        width: var(--pipw, 108px);
+        height: auto;
+        border-radius: 4px;
+        background: #fff;
+      }
+      .pip figcaption {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        font-size: 10px;
+        line-height: 1;
+        padding: 3px 5px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .pip.big {
+        --pipw: min(220px, 46vw);
+      }
+      @media (min-width: 900px) {
+        .pip {
+          display: none;
+        }
+      }
+      .zoom {
+        position: absolute;
+        right: max(10px, env(safe-area-inset-right, 0px));
+        top: 50%;
+        transform: translateY(-50%);
+        display: grid;
+        gap: 2px;
+        z-index: 2;
+        background: rgba(12, 16, 15, 0.82);
+        border-radius: 12px;
+        padding: 4px;
+        box-shadow: 0 0 0 1px var(--ws-line);
+      }
+      .zoom button {
+        width: 44px;
+        height: 44px;
+        border: 0;
+        background: transparent;
+        color: var(--ws-fg);
+        font-size: 22px;
+        line-height: 1;
+        display: grid;
+        place-items: center;
+      }
+      .zoom button:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .zoom #zFit {
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        height: 34px;
+        color: var(--ws-muted);
+      }
+      .hud {
+        position: absolute;
+        left: 50%;
+        top: 10px;
+        transform: translateX(-50%);
+        z-index: 2;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        background: rgba(12, 16, 15, 0.82);
+        color: var(--ws-fg);
+        padding: 5px 10px;
+        border-radius: 999px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        white-space: nowrap;
+      }
+      .hud.on {
+        opacity: 1;
+      }
+      .side {
+        display: none;
+        border-left: 1px solid var(--ws-line);
+        padding: 16px;
+        gap: 12px;
+        align-content: start;
+        overflow: auto;
+      }
+      @media (min-width: 900px) {
+        .side {
+          display: grid;
+        }
+      }
+      .side .label {
+        color: var(--ws-muted);
+      }
+      .side canvas {
+        width: 100%;
+        height: auto;
+        border-radius: 6px;
+        background: #fff;
+        box-shadow: 0 0 0 1px var(--ws-line);
+      }
+      .side .dims {
+        font-size: 12px;
+        color: var(--ws-muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .side ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--ws-muted);
+        font-size: 13px;
+        display: grid;
+        gap: 4px;
+      }
+      .side kbd {
+        font-family: var(--mono);
+        font-size: 11px;
+        border: 1px solid var(--ws-line);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      .tools {
+        display: flex;
+        justify-content: center;
+        gap: 2px;
+        flex-wrap: nowrap;
+        border-top: 1px solid var(--ws-line);
+        padding-block: 6px calc(6px + env(safe-area-inset-bottom, 0px));
+        padding-left: max(8px, env(safe-area-inset-left, 0px));
+        padding-right: max(8px, env(safe-area-inset-right, 0px));
+      }
+      .tools button,
+      .tools label {
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 3px;
+        flex: 0 1 92px;
+        min-width: 0;
+        text-align: center;
+        line-height: 1.2;
+        padding: 6px 4px;
+        background: transparent;
+        border: 0;
+        color: var(--ws-fg);
+        font-size: 11px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .tools button:hover,
+      .tools label:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .tools svg {
+        width: 22px;
+        height: 22px;
+      }
+      .tools input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .tools label.on {
+        color: var(--crop-active);
+      }
+      .tools label:focus-within {
+        outline: 2px solid var(--crop-active);
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .loupe,
+        .pip,
+        .hud {
+          transition: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+        }
+      }
+    </style>
+
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+            <rect width="34" height="34" rx="9" fill="#202B26" />
+            <rect x="7" y="9" width="9" height="7" rx="1.5" fill="#55C98A" />
+            <rect
+              x="18"
+              y="9"
+              width="9"
+              height="7"
+              rx="1.5"
+              fill="#55C98A"
+              opacity=".6"
+            />
+            <rect
+              x="7"
+              y="18"
+              width="9"
+              height="7"
+              rx="1.5"
+              fill="#55C98A"
+              opacity=".6"
+            />
+            <rect
+              x="18"
+              y="18"
+              width="9"
+              height="7"
+              rx="1.5"
+              fill="#55C98A"
+              opacity=".35"
+            />
+          </svg>
+          <div>
+            <h1>ID Sheet Maker</h1>
+            <p>PAN card, passport pages and photo on one A4 landscape PDF</p>
+          </div>
+        </div>
+        <span class="privacy"
+          ><svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            aria-hidden="true"
+          >
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg
+          >Your files stay on your device. 100% private.</span
+        >
+      </header>
+
+      <div class="cols">
+        <div class="stack">
+          <section class="card" aria-labelledby="s1">
+            <div class="step">
+              <span class="n">01</span>
+              <h2 id="s1">Add documents</h2>
+              <span class="meta" id="trayCount"></span>
+            </div>
+            <div class="drop" id="drop">
+              <div class="ico">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 16V4M7 9l5-5 5 5" />
+                  <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+                </svg>
+              </div>
+              <strong>Drop photos or scans here</strong>
+              <span class="hint"
+                >Add everything at once. Each file is searched for PAN cards and
+                passport pages.</span
+              >
+              <label class="btn btn-primary"
+                >Choose files<input
+                  type="file"
+                  id="fileAll"
+                  accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
+                  multiple
+              /></label>
+              <div class="fmts" aria-label="Supported formats">
+                <span>JPG</span><span>JPEG</span><span>PNG</span
+                ><span>WEBP</span><span>PDF</span>
+              </div>
+              <div class="progress" id="progress" hidden>
+                <span class="spin" aria-hidden="true"></span
+                ><span id="progressText">Reading files…</span>
+              </div>
+            </div>
+            <form class="pw" id="pwRow" hidden>
+              <label for="pw" id="pwLabel"
+                >This PDF is locked. Password (e-PAN: date of birth as
+                DDMMYYYY):</label
+              >
+              <div class="inrow">
+                <input
+                  class="inp"
+                  type="password"
+                  id="pw"
+                  autocomplete="off"
+                /><button class="btn btn-primary" type="submit">Unlock</button
+                ><button class="btn btn-ghost" type="button" id="pwSkip">
+                  Skip
+                </button>
+              </div>
+            </form>
+            <div id="trayWrap" hidden>
+              <p class="hint" style="margin-bottom: 10px">
+                Found in your files. Change the type if a guess is wrong.
+              </p>
+              <div class="tray" id="tray"></div>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="s2">
+            <div class="step">
+              <span class="n">02</span>
+              <h2 id="s2">Check and adjust</h2>
+              <span class="meta" id="slotCount"></span>
+            </div>
+            <p class="hint">
+              Documents are cropped, turned upright and placed automatically.
+              Use <b>Adjust</b> to fine-tune a crop or rotate it.
+            </p>
+            <div class="slots" id="slots"></div>
+          </section>
+        </div>
+
+        <div class="stack right">
+          <section class="card" aria-labelledby="s3">
+            <div class="step">
+              <span class="n">03</span>
+              <h2 id="s3">Review and export</h2>
+            </div>
+            <div class="sheetbox">
+              <canvas
+                id="sheet"
+                width="1754"
+                height="1240"
+                role="img"
+                aria-label="Preview of the A4 sheet"
+              ></canvas>
+              <div class="sheetcap">
+                <span>A4 landscape · 297 × 210 mm</span
+                ><span id="sheetFill">0 of 4 placed</span>
+              </div>
+            </div>
+
+            <div class="fields">
+              <div class="field">
+                <label for="name">Name on the PAN card</label>
+                <div class="inrow">
+                  <input
+                    class="inp"
+                    type="text"
+                    id="name"
+                    placeholder="e.g. MOMIN ZAHEER"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                  /><button
+                    class="btn btn-sm"
+                    type="button"
+                    id="readAgain"
+                    title="Read the name from the PAN card again"
+                    style="min-height: 44px"
+                  >
+                    Read again
+                  </button>
+                </div>
+                <p class="hint" id="nameSrc"></p>
+              </div>
+              <div class="field">
+                <label for="fileName">PDF file name</label>
+                <input
+                  class="inp"
+                  type="text"
+                  id="fileName"
+                  autocomplete="off"
+                  spellcheck="false"
+                  inputmode="text"
+                />
+                <p class="hint" id="fileHint">
+                  Made from the name. You can edit it.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div class="label" style="margin-bottom: 6px">Checks</div>
+              <ul class="checks" id="checks" aria-live="polite"></ul>
+            </div>
+            <div class="ai" id="aiRow" hidden>
+              <button class="btn btn-sm" id="aiGo">Check with Claude</button
+              ><span class="hint" id="aiStatus"
+                >Reads the PAN name, checks each document is upright and
+                readable, and compares names and dates of birth. Sends reduced
+                copies of the four crops to Claude.</span
+              >
+            </div>
+            <div class="faces" id="faces"></div>
+            <label class="confirm"
+              ><input type="checkbox" id="same" /> The person looks the same on
+              the PAN card, passport and photo</label
+            >
+
+            <div class="actions">
+              <button class="btn btn-primary" id="dl" disabled>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 4v11M7 10l5 5 5-5" />
+                  <path d="M5 20h14" /></svg
+                >Download PDF
+              </button>
+              <button class="btn btn-wa" id="share" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.7-1.2s.2-1.1.2-1.2-.2-.2-.4-.3z"
+                  /></svg
+                >Share to WhatsApp
+              </button>
+              <button class="btn btn-ghost" id="reset">
+                Start next person
+              </button>
+            </div>
+            <div class="confirmbar" id="resetConfirm" hidden>
+              <span
+                >This sheet hasn't been downloaded or shared. Clear it and start
+                the next person?</span
+              ><button class="btn btn-sm" id="resetYes">Clear</button
+              ><button class="btn btn-sm btn-ghost" id="resetNo">Keep</button>
+            </div>
+            <div
+              class="status"
+              id="status"
+              role="status"
+              aria-live="polite"
+            ></div>
+
+            <details class="more">
+              <summary>Issue note</summary>
+              <div class="notebox" style="margin-top: 8px">
+                <div class="note" id="note">—</div>
+                <button class="btn btn-sm" id="copy">Copy</button>
+              </div>
+            </details>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="toast" hidden role="status">
+      <span id="toastText"></span
+      ><button class="btn btn-sm btn-ghost" id="toastUndo">Undo</button>
+    </div>
+
+    <div
+      class="editor"
+      id="editor"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edTitle"
+    >
+      <div class="ed">
+        <header class="edhead">
+          <button class="ghost" id="edCancel">Cancel</button>
+          <strong id="edTitle">Adjust crop</strong>
+          <button class="apply end" id="edOk">Apply</button>
+        </header>
+        <div class="edmain">
+          <div class="work" id="work">
+            <canvas
+              id="edCanvas"
+              tabindex="0"
+              aria-describedby="edHelp"
+            ></canvas>
+            <p class="sr" id="edHelp">
+              Crop area. Drag a corner to move it, drag an edge to move that
+              side, drag inside to move the whole crop, drag outside to pan.
+              Pinch, scroll or use the zoom buttons to zoom. With the keyboard:
+              arrow keys nudge the selected handle, Shift moves faster, the [
+              and ] keys choose the handle, plus and minus zoom, 0 fits.
+            </p>
+            <canvas class="loupe" id="loupe" hidden aria-hidden="true"></canvas>
+            <figure class="pip" id="pip" title="Result. Tap to enlarge.">
+              <canvas id="edOut"></canvas>
+              <figcaption>Result</figcaption>
+            </figure>
+            <div class="hud" id="hud" aria-live="polite"></div>
+            <div class="zoom" role="group" aria-label="Zoom">
+              <button id="zIn" aria-label="Zoom in">+</button>
+              <button id="zFit" aria-label="Fit the whole image">Fit</button>
+              <button id="zOut" aria-label="Zoom out">&minus;</button>
+            </div>
+          </div>
+          <aside class="side" aria-label="Result">
+            <div class="label">Result</div>
+            <canvas id="edOutL"></canvas>
+            <div class="dims" id="edDims"></div>
+            <ul>
+              <li>Drag a corner or an edge; drag inside to move</li>
+              <li>Scroll to zoom, drag outside the crop to pan</li>
+              <li>
+                <kbd>←</kbd><kbd>→</kbd> nudge · <kbd>[</kbd><kbd>]</kbd> pick
+                handle · <kbd>0</kbd> fit
+              </li>
+            </ul>
+          </aside>
+        </div>
+        <footer class="tools">
+          <button id="edAuto">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            >
+              <path
+                d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"
+              />
+              <path d="M9 12l2 2 4-4" /></svg
+            >Auto-detect
+          </button>
+          <button id="edFull">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            >
+              <rect x="4" y="4" width="16" height="16" rx="1.5" />
+              <path d="M9 4v16M15 4v16" opacity=".35" /></svg
+            >Whole image
+          </button>
+          <button id="edRotL">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            >
+              <path d="M4 4v5h5" />
+              <path d="M5.5 15a7 7 0 1 0 1.2-8.3L4 9" /></svg
+            >Rotate left
+          </button>
+          <button id="edRotR">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            >
+              <path d="M20 4v5h-5" />
+              <path d="M18.5 15a7 7 0 1 1-1.2-8.3L20 9" /></svg
+            >Rotate right
+          </button>
+          <label id="edRoundL"
+            ><input type="checkbox" id="edRound" /><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <rect x="4" y="6" width="16" height="12" rx="3.5" /></svg
+            >Round corners</label
+          >
+        </footer>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+      "use strict";
+      /* Layout measured from the reference sheet (pixels at 150 dpi on a 1754×1240 A4 landscape page). */
+      const PAGE = { w: 1754, h: 1240 };
+      const SLOTS = [
+        {
+          key: "pan",
+          title: "PAN card (front)",
+          pos: "Top left",
+          box: [27, 37, 869, 557],
+          landscape: true,
+          doc: true,
+        },
+        {
+          key: "data",
+          title: "Passport data page",
+          pos: "Top right",
+          box: [915, 26, 1724, 594],
+          landscape: true,
+          doc: true,
+        },
+        {
+          key: "photo",
+          title: "Passport-size photo",
+          pos: "Bottom left",
+          box: [214, 638, 702, 1161],
+          landscape: false,
+          doc: false,
+        },
+        {
+          key: "addr",
+          title: "Passport address page",
+          pos: "Bottom right",
+          box: [921, 634, 1703, 1177],
+          landscape: true,
+          doc: true,
+        },
+      ];
+      const SLOT = Object.fromEntries(SLOTS.map((s) => [s.key, s]));
+      const $ = (id) => document.getElementById(id);
+      if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      }
+
+      let items = []; // one per document found: {id,upload,name,src,quad,rot,round,slot,label,sure,whole,out,sharp,native,edgeTouch,picked,ai}
+      let nextId = 1,
+        nextUpload = 1,
+        autoName = "";
+
+      /* ================= loading ================= */
+      const MAXSIDE = 3000;
+      function toCanvas(img, w, h) {
+        const s = Math.min(1, MAXSIDE / Math.max(w, h));
+        const c = document.createElement("canvas");
+        c.width = Math.round(w * s);
+        c.height = Math.round(h * s);
+        const x = c.getContext("2d");
+        x.fillStyle = "#fff";
+        x.fillRect(0, 0, c.width, c.height);
+        x.drawImage(img, 0, 0, c.width, c.height);
+        return c;
+      }
+      async function loadFile(file, password) {
+        const out = [];
+        if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+          if (!window.pdfjsLib)
+            throw new Error(
+              "The PDF reader did not load. Check your internet connection and reload the page.",
+            );
+          let pdf;
+          try {
+            pdf = await pdfjsLib.getDocument({
+              data: await file.arrayBuffer(),
+              password,
+            }).promise;
+          } catch (e) {
+            if (e && e.name === "PasswordException") {
+              const er = new Error("locked");
+              er.locked = true;
+              er.wrong = e.code === 2;
+              throw er;
+            }
+            throw e;
+          }
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const p = await pdf.getPage(i);
+            const vp0 = p.getViewport({ scale: 1 });
+            const scale = Math.min(
+              250 / 72,
+              MAXSIDE / Math.max(vp0.width, vp0.height),
+            );
+            const vp = p.getViewport({ scale });
+            const c = document.createElement("canvas");
+            c.width = Math.round(vp.width);
+            c.height = Math.round(vp.height);
+            const ctx = c.getContext("2d");
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, c.width, c.height);
+            await p.render({ canvasContext: ctx, viewport: vp }).promise;
+            out.push({
+              name: file.name + (pdf.numPages > 1 ? ` p${i}` : ""),
+              file: file.name,
+              page: pdf.numPages > 1 ? i : 0,
+              src: c,
+            });
+          }
+        } else {
+          let bmp;
+          try {
+            bmp = await createImageBitmap(file, {
+              imageOrientation: "from-image",
+            });
+          } catch (e) {
+            throw new Error(
+              `${file.name}: this image type can't be read. Use JPG, PNG or WebP (convert iPhone HEIC photos first).`,
+            );
+          }
+          out.push({
+            name: file.name,
+            file: file.name,
+            page: 0,
+            src: toCanvas(bmp, bmp.width, bmp.height),
+          });
+          bmp.close && bmp.close();
+        }
+        return out;
+      }
+      let locked = []; // [{file,forSlot}]
+      let busyFiles = 0;
+      function progress(t) {
+        busyFiles += t ? 0 : 0;
+        $("progress").hidden = !t;
+        $("drop").classList.toggle("busy", !!t);
+        if (t) $("progressText").textContent = t;
+      }
+      async function addFiles(files, forSlot, password, opt) {
+        opt = opt || {};
+        const before = items.filter((x) => x.slot === forSlot);
+        const made = [],
+          errors = [];
+        for (let k = 0; k < files.length; k++) {
+          const f = files[k];
+          progress(
+            files.length > 1
+              ? `Reading file ${k + 1} of ${files.length}: ${f.name}`
+              : `Reading ${f.name}…`,
+          );
+          await new Promise((r) => setTimeout(r, 20)); // let the spinner paint before heavy work
+          try {
+            const got = await loadFile(f, password);
+            for (let g = 0; g < got.length; g++) {
+              if (got.length > 1)
+                progress(
+                  `Finding documents in ${f.name} (page ${g + 1} of ${got.length})`,
+                );
+              await new Promise((r) => setTimeout(r, 0));
+              made.push(
+                ...analyzeUpload(got[g].src, got[g].name, forSlot, got[g]),
+              );
+            }
+          } catch (e) {
+            if (e.locked) {
+              locked.push({
+                file: f,
+                forSlot,
+                wrong: e.wrong && !!password,
+                opt,
+              });
+              continue;
+            }
+            errors.push(e.message || String(e));
+          }
+        }
+        progress("");
+        // Upload New: the new image takes the old one's place (same type and position on the sheet)
+        if (opt.replace && forSlot && made.some((i) => i.slot === forSlot)) {
+          for (const old of before) {
+            const i = items.indexOf(old);
+            if (i >= 0) items.splice(i, 1);
+          }
+          const nw = made.filter((i) => i.slot === forSlot);
+          items
+            .filter((x) => x.slot === forSlot)
+            .forEach((x) => (x.picked = false));
+          nw[0].picked = true;
+        }
+        showPassword();
+        const placed = made.filter((i) => i.slot).length;
+        if (errors.length) setStatus(errors.join(" "), "bad");
+        else if (made.length)
+          setStatus(
+            opt.replace
+              ? `Replaced the ${SLOT[forSlot].title}.`
+              : `Added ${placed} document${placed === 1 ? "" : "s"} from ${files.length} file${files.length === 1 ? "" : "s"}${made.length > placed ? ` (${made.length - placed} not used)` : ""}.`,
+            "ok",
+          );
+        else if (!locked.length)
+          setStatus("No documents were found in that file.", "bad");
+        render();
+        scheduleAI();
+        scheduleOCR();
+      }
+      function showPassword() {
+        const row = $("pwRow");
+        row.hidden = !locked.length;
+        if (locked.length) {
+          $("pwLabel").textContent =
+            (locked[0].wrong ? "Wrong password. " : "") +
+            `"${locked[0].file.name}" is locked. Password (e-PAN: date of birth as DDMMYYYY):`;
+          $("pw").value = "";
+        }
+      }
+      $("pwRow").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const L = locked.shift();
+        if (!L) return;
+        await addFiles([L.file], L.forSlot, $("pw").value.trim(), L.opt);
+      });
+      $("pwSkip").onclick = () => {
+        locked.shift();
+        showPassword();
+        setStatus("");
+      };
+
+      /* ================= image helpers ================= */
+      function median(a) {
+        const s = Float64Array.from(a).sort();
+        return s[s.length >> 1];
+      }
+      function boxBlur(src, w, h, r) {
+        const a = new Float32Array(w * h * 3),
+          b = new Float32Array(w * h * 3);
+        for (let j = 0, i = 0; j < w * h; j++, i += 4) {
+          a[j * 3] = src[i];
+          a[j * 3 + 1] = src[i + 1];
+          a[j * 3 + 2] = src[i + 2];
+        }
+        const pass = (inp, out, horiz) => {
+          const n = horiz ? w : h,
+            lines = horiz ? h : w;
+          for (let L = 0; L < lines; L++)
+            for (let ch = 0; ch < 3; ch++) {
+              let acc = 0,
+                cnt = 0;
+              const idx = (k) => (horiz ? L * w + k : k * w + L) * 3 + ch;
+              for (let k = 0; k <= r && k < n; k++) {
+                acc += inp[idx(k)];
+                cnt++;
+              }
+              for (let k = 0; k < n; k++) {
+                out[idx(k)] = acc / cnt;
+                const add = k + r + 1,
+                  rem = k - r;
+                if (add < n) {
+                  acc += inp[idx(add)];
+                  cnt++;
+                }
+                if (rem >= 0) {
+                  acc -= inp[idx(rem)];
+                  cnt--;
+                }
+              }
+            }
+        };
+        pass(a, b, true);
+        pass(b, a, false);
+        const o = new Uint8ClampedArray(w * h * 4);
+        for (let j = 0; j < w * h; j++) {
+          o[j * 4] = a[j * 3];
+          o[j * 4 + 1] = a[j * 3 + 1];
+          o[j * 4 + 2] = a[j * 3 + 2];
+          o[j * 4 + 3] = 255;
+        }
+        return o;
+      }
+      function otsu(D) {
+        let max = 0;
+        for (const v of D) if (v > max) max = v;
+        if (!max) return 0;
+        const bins = 256,
+          hist = new Float64Array(bins);
+        for (const v of D)
+          hist[Math.min(bins - 1, Math.floor((v / max) * (bins - 1)))]++;
+        const tot = D.length;
+        let sum = 0;
+        for (let i = 0; i < bins; i++) sum += i * hist[i];
+        let w0 = 0,
+          s0 = 0,
+          best = 0,
+          t = 0;
+        for (let i = 0; i < bins; i++) {
+          w0 += hist[i];
+          if (!w0) continue;
+          const w1 = tot - w0;
+          if (!w1) break;
+          s0 += i * hist[i];
+          const m0 = s0 / w0,
+            m1 = (sum - s0) / w1,
+            v = w0 * w1 * (m0 - m1) * (m0 - m1);
+          if (v > best) {
+            best = v;
+            t = i;
+          }
+        }
+        return ((t + 0.5) / (bins - 1)) * max;
+      }
+      function label(m, w, h) {
+        // connected components (4-neighbour)
+        const lab = new Int32Array(w * h),
+          stack = new Int32Array(w * h),
+          comps = [];
+        let cur = 0;
+        for (let s = 0; s < w * h; s++) {
+          if (!m[s] || lab[s]) continue;
+          cur++;
+          let sp = 0,
+            n = 0,
+            x0 = w,
+            y0 = h,
+            x1 = 0,
+            y1 = 0;
+          stack[sp++] = s;
+          lab[s] = cur;
+          while (sp) {
+            const j = stack[--sp];
+            n++;
+            const x = j % w,
+              y = (j / w) | 0;
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (y < y0) y0 = y;
+            if (y > y1) y1 = y;
+            if (x > 0 && m[j - 1] && !lab[j - 1]) {
+              lab[j - 1] = cur;
+              stack[sp++] = j - 1;
+            }
+            if (x < w - 1 && m[j + 1] && !lab[j + 1]) {
+              lab[j + 1] = cur;
+              stack[sp++] = j + 1;
+            }
+            if (y > 0 && m[j - w] && !lab[j - w]) {
+              lab[j - w] = cur;
+              stack[sp++] = j - w;
+            }
+            if (y < h - 1 && m[j + w] && !lab[j + w]) {
+              lab[j + w] = cur;
+              stack[sp++] = j + w;
+            }
+          }
+          comps.push({ id: cur, n, x0, y0, x1, y1 });
+        }
+        return { lab, comps };
+      }
+      function spanArea(lab, w, c) {
+        let a = 0;
+        for (let y = c.y0; y <= c.y1; y++) {
+          let f = -1,
+            l = -1;
+          for (let x = c.x0; x <= c.x1; x++)
+            if (lab[y * w + x] === c.id) {
+              if (f < 0) f = x;
+              l = x;
+            }
+          if (f >= 0) a += l - f + 1;
+        }
+        return a;
+      }
+      function fitLine(pts, out) {
+        // y = k x + b; out = which side is outside (-1 smaller, +1 larger)
+        // points that fall well inside the line come from light areas on the document (a photo, a QR code) and are dropped
+        let use = pts,
+          k = 0,
+          b = 0;
+        for (let it = 0; it < 5; it++) {
+          const n = use.length;
+          if (n < 3) break;
+          let sx = 0,
+            sy = 0,
+            sxx = 0,
+            sxy = 0;
+          for (const [x, y] of use) {
+            sx += x;
+            sy += y;
+            sxx += x * x;
+            sxy += x * y;
+          }
+          const d = n * sxx - sx * sx;
+          if (!d) break;
+          k = (n * sxy - sx * sy) / d;
+          b = (sy - k * sx) / n;
+          const res = pts.map(([x, y]) => (y - (k * x + b)) * out);
+          const m = median(res.map(Math.abs));
+          const tol = Math.max(1.5, 1.5 * m);
+          const nu = pts.filter(
+            (_, i) => res[i] >= -tol && res[i] <= Math.max(4 * tol, 6),
+          );
+          if (
+            nu.length < Math.max(3, 0.25 * pts.length) ||
+            nu.length === use.length
+          )
+            break;
+          use = nu;
+        }
+        return [k, b];
+      }
+      function fitQuad(on, c, w, h) {
+        // straight edges of a blob, from the outside in
+        const run = (x, y, dx, dy) =>
+          on(x, y) && on(x + dx, y + dy) && on(x + 2 * dx, y + 2 * dy);
+        const top = [],
+          bot = [],
+          lef = [],
+          rig = [];
+        const { x0: c0, x1: c1, y0: r0, y1: r1 } = c;
+        const xs = c0 + 0.15 * (c1 - c0),
+          xe = c1 - 0.15 * (c1 - c0),
+          ys = r0 + 0.15 * (r1 - r0),
+          ye = r1 - 0.15 * (r1 - r0);
+        const stx = Math.max(1, (xe - xs) / 80),
+          sty = Math.max(1, (ye - ys) / 80);
+        for (let fx = xs; fx <= xe; fx += stx) {
+          const x = Math.round(fx);
+          for (let y = r0; y <= r1; y++)
+            if (run(x, y, 0, 1)) {
+              top.push([x, y]);
+              break;
+            }
+          for (let y = r1; y >= r0; y--)
+            if (run(x, y, 0, -1)) {
+              bot.push([x, y + 1]);
+              break;
+            }
+        }
+        for (let fy = ys; fy <= ye; fy += sty) {
+          const y = Math.round(fy);
+          for (let x = c0; x <= c1; x++)
+            if (run(x, y, 1, 0)) {
+              lef.push([y, x]);
+              break;
+            }
+          for (let x = c1; x >= c0; x--)
+            if (run(x, y, -1, 0)) {
+              rig.push([y, x + 1]);
+              break;
+            }
+        }
+        const rect = [
+          [c0, r0],
+          [c1 + 1, r0],
+          [c1 + 1, r1 + 1],
+          [c0, r1 + 1],
+        ];
+        if (
+          top.length < 5 ||
+          bot.length < 5 ||
+          lef.length < 5 ||
+          rig.length < 5
+        )
+          return rect;
+        const T = fitLine(top, -1),
+          B = fitLine(bot, 1),
+          L = fitLine(lef, -1),
+          R = fitLine(rig, 1);
+        const X = (hl, vl) => {
+          const [kh, bh] = hl,
+            [kv, bv] = vl;
+          const y = (kh * bv + bh) / (1 - kh * kv);
+          return [kv * y + bv, y];
+        };
+        const q = [X(T, L), X(T, R), X(B, R), X(B, L)];
+        // reject wild fits (e.g. a torn edge): fall back to the bounding box
+        if (
+          q.some(
+            ([x, y]) =>
+              !isFinite(x) ||
+              !isFinite(y) ||
+              x < c0 - 0.1 * (c1 - c0) ||
+              x > c1 + 0.1 * (c1 - c0) ||
+              y < r0 - 0.1 * (r1 - r0) ||
+              y > r1 + 0.1 * (r1 - r0),
+          )
+        )
+          return rect;
+        return q;
+      }
+      const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+      function polyArea(q) {
+        let a = 0;
+        for (let i = 0; i < 4; i++) {
+          const [x1, y1] = q[i],
+            [x2, y2] = q[(i + 1) % 4];
+          a += x1 * y2 - x2 * y1;
+        }
+        return Math.abs(a) / 2;
+      }
+      function quadSize(q) {
+        return [
+          (dist(q[0], q[1]) + dist(q[3], q[2])) / 2,
+          (dist(q[0], q[3]) + dist(q[1], q[2])) / 2,
+        ];
+      }
+      function aspect(q) {
+        const [a, b] = quadSize(q);
+        return Math.max(a, b) / Math.max(1, Math.min(a, b));
+      }
+      function homography(q) {
+        // unit square -> quad (TL,TR,BR,BL)
+        const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
+        const dx1 = x1 - x2,
+          dx2 = x3 - x2,
+          dx3 = x0 - x1 + x2 - x3,
+          dy1 = y1 - y2,
+          dy2 = y3 - y2,
+          dy3 = y0 - y1 + y2 - y3;
+        let a, b, c, d, e, f, g, h;
+        if (Math.abs(dx3) < 1e-9 && Math.abs(dy3) < 1e-9) {
+          a = x1 - x0;
+          b = x2 - x1;
+          c = x0;
+          d = y1 - y0;
+          e = y2 - y1;
+          f = y0;
+          g = 0;
+          h = 0;
+        } else {
+          const den = dx1 * dy2 - dx2 * dy1;
+          g = (dx3 * dy2 - dx2 * dy3) / den;
+          h = (dx1 * dy3 - dx3 * dy1) / den;
+          a = x1 - x0 + g * x1;
+          b = x3 - x0 + h * x3;
+          c = x0;
+          d = y1 - y0 + g * y1;
+          e = y3 - y0 + h * y3;
+          f = y0;
+        }
+        return (u, v) => {
+          const z = g * u + h * v + 1;
+          return [(a * u + b * v + c) / z, (d * u + e * v + f) / z];
+        };
+      }
+      function subQuad(q, u0, v0, u1, v1) {
+        const m = homography(q);
+        return [m(u0, v0), m(u1, v0), m(u1, v1), m(u0, v1)];
+      }
+      function fullQuad(W, H) {
+        return [
+          [0, 0],
+          [W, 0],
+          [W, H],
+          [0, H],
+        ];
+      }
+
+      /* ================= finding documents in a file ================= */
+      function findObjects(src) {
+        const W = src.width,
+          H = src.height,
+          s = Math.min(1, 800 / Math.max(W, H));
+        const w = Math.max(16, Math.round(W * s)),
+          h = Math.max(16, Math.round(H * s));
+        const cv = document.createElement("canvas");
+        cv.width = w;
+        cv.height = h;
+        const cx = cv.getContext("2d", { willReadFrequently: true });
+        cx.drawImage(src, 0, 0, w, h);
+        const raw = cx.getImageData(0, 0, w, h).data;
+        const d = boxBlur(raw, w, h, 2);
+        const R = [],
+          G = [],
+          B = [];
+        const push = (x, y) => {
+          const i = (y * w + x) * 4;
+          R.push(d[i]);
+          G.push(d[i + 1]);
+          B.push(d[i + 2]);
+        };
+        for (let x = 0; x < w; x += 2) {
+          push(x, 3);
+          push(x, h - 4);
+        }
+        for (let y = 0; y < h; y += 2) {
+          push(3, y);
+          push(w - 4, y);
+        }
+        const br = median(R),
+          bgc = median(G),
+          bb = median(B);
+        const scan = br > 225 && bgc > 225 && bb > 225; // white scanner bed or a white page
+        const D = new Float32Array(w * h);
+        for (let i = 0, j = 0; j < w * h; i += 4, j++)
+          D[j] =
+            Math.abs(d[i] - br) +
+            Math.abs(d[i + 1] - bgc) +
+            Math.abs(d[i + 2] - bb);
+        const thr = scan ? 14 : Math.max(40, otsu(D));
+        const m = new Uint8Array(w * h);
+        for (let j = 0; j < w * h; j++) m[j] = D[j] > thr ? 1 : 0;
+        const { lab, comps } = label(m, w, h);
+        const gray = new Float32Array(w * h);
+        for (let i = 0, j = 0; j < w * h; i += 4, j++)
+          gray[j] = 0.299 * raw[i] + 0.587 * raw[i + 1] + 0.114 * raw[i + 2];
+        const minA = 0.012 * w * h,
+          docs = [];
+        const inside = (pt, q) => {
+          let c = false;
+          for (let i = 0, j = 3; i < 4; j = i++) {
+            const [xi, yi] = q[i],
+              [xj, yj] = q[j];
+            if (
+              yi > pt[1] !== yj > pt[1] &&
+              pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi
+            )
+              c = !c;
+          }
+          return c;
+        };
+        const cen = (q) => [
+          q.reduce((a, v) => a + v[0], 0) / 4,
+          q.reduce((a, v) => a + v[1], 0) / 4,
+        ];
+        for (const c of comps) {
+          if (c.n < minA) continue;
+          const on = (x, y) =>
+            x >= 0 && y >= 0 && x < w && y < h && lab[y * w + x] === c.id;
+          const q = fitQuad(on, c, w, h),
+            qa = polyArea(q);
+          if (qa < minA) continue;
+          const fill = spanArea(lab, w, c) / qa;
+          if (fill < 0.85 || fill > 1.25) continue; // not a flat rectangle (a person, a shadow…)
+          docs.push({ q, area: qa, c });
+        }
+        // second opinion: documents have four straight edges. Find quadrilaterals made of strong lines and score every candidate by its edges.
+        const E = edgeMap(gray, w, h);
+        const cands = [];
+        for (const doc of docs) {
+          const sp = edgeSupport(E, doc.q);
+          cands.push({
+            q: doc.q,
+            area: doc.area,
+            sup: sp.mean,
+            min: sp.min,
+            colour: true,
+            ok: supportOk(sp),
+          });
+        }
+        for (const c of houghQuads(E, w, h, minA)) cands.push(c);
+        const picked = [];
+        const score = (c) =>
+          (c.sup + (c.colour && c.ok ? 0.1 : 0)) *
+          Math.sqrt(Math.max(0.1, c.min)) *
+          Math.pow(c.area / (w * h), 0.3);
+        cands
+          .filter((c) => c.colour || c.ok)
+          .sort((a, b) => score(b) - score(a))
+          .forEach((c) => {
+            if (c.colour && c.sup < 0.4 && !(scan && c.sup >= 0.25)) return; // a colour blob without any straight edges
+            const cc = cen(c.q);
+            if (picked.some((p) => inside(cc, p.q) || inside(cen(p.q), c.q)))
+              return;
+            picked.push(c);
+          });
+        docs.length = 0;
+        docs.push(...picked);
+        const sample = (q, fn) => {
+          const mp = homography(q);
+          let n = 0,
+            k = 0;
+          for (let i = 0; i < 48; i++)
+            for (let j = 0; j < 36; j++) {
+              const [x, y] = mp((i + 0.5) / 48, (j + 0.5) / 36);
+              const xi = x | 0,
+                yi = y | 0;
+              if (xi < 0 || yi < 0 || xi >= w || yi >= h) continue;
+              n++;
+              if (fn(xi, yi)) k++;
+            }
+          return n ? k / n : 0;
+        };
+        const out = [];
+        let trim = null;
+        if (scan) {
+          // everything that is not white paper
+          let r0 = -1,
+            r1 = -1,
+            c0 = -1,
+            c1 = -1;
+          for (let y = 0; y < h; y++) {
+            let k = 0;
+            for (let x = 0; x < w; x++) k += m[y * w + x];
+            if (k > 0.03 * w) {
+              if (r0 < 0) r0 = y;
+              r1 = y;
+            }
+          }
+          for (let x = 0; x < w; x++) {
+            let k = 0;
+            for (let y = 0; y < h; y++) k += m[y * w + x];
+            if (k > 0.03 * h) {
+              if (c0 < 0) c0 = x;
+              c1 = x;
+            }
+          }
+          if (r0 >= 0 && c0 >= 0)
+            trim = [
+              [c0, r0],
+              [c1 + 1, r0],
+              [c1 + 1, r1 + 1],
+              [c0, r1 + 1],
+            ];
+        }
+        // a pale scanned page on white falls apart into its photo, text blocks…: then the page as a whole is the document
+        // …unless the found documents hold nearly all of the picture's detail (then the rest is just desk, shadow and light)
+        let outside = 0,
+          all = 0;
+        if (trim && docs.length) {
+          for (let y = 0; y < h; y += 2)
+            for (let x = 0; x < w; x += 2) {
+              if (!E.on[y * w + x]) continue;
+              all++;
+              if (!docs.some((dc) => inside([x, y], dc.q))) outside++;
+            }
+        }
+        if (
+          trim &&
+          docs.reduce((a, x) => a + x.area, 0) < 0.5 * polyArea(trim) &&
+          !(all && outside < 0.3 * all)
+        )
+          docs.length = 0;
+        if (!docs.length) out.push({ q: trim || fullQuad(w, h), whole: true });
+        // cards printed on a page (e-PAN): coloured card-shaped areas with a QR code lying inside a bigger document
+        const cards = findCards(d, w, h, minA);
+        const containers = [];
+        const hasQR = (cq) => {
+          const c = warp({ src: cv, quad: cq, rot: 0 }, 400);
+          return qrSide(grayOf(c), c.width, c.height).has;
+        };
+        for (const doc of docs) {
+          const inner = cards.filter(
+            (cq) => inside(cen(cq), doc.q) && polyArea(cq) < 0.5 * doc.area,
+          );
+          if (!inner.some(hasQR)) continue;
+          if (inner.length) {
+            containers.push(doc);
+            for (const cq of inner)
+              if (!out.some((o) => dist(cen(o.q), cen(cq)) < 5))
+                out.push({ q: cq, card: true });
+          }
+        }
+        for (const doc of docs) {
+          if (
+            containers.some(
+              (c) =>
+                c === doc || (c.area > doc.area && inside(cen(doc.q), c.q)),
+            )
+          )
+            continue;
+          const asp = aspect(doc.q);
+          if (
+            asp >= 1.3 &&
+            asp <= 1.6 &&
+            skinShare(
+              warp(
+                { src, quad: doc.q.map(([x, y]) => [x / s, y / s]), rot: 0 },
+                300,
+              ),
+            ) < 0.15
+          ) {
+            // maybe an open passport: two pages side by side, one of them blank
+            const [a, b] = quadSize(doc.q);
+            const halves =
+              a >= b
+                ? [subQuad(doc.q, 0, 0, 0.5, 1), subQuad(doc.q, 0.5, 0, 1, 1)]
+                : [subQuad(doc.q, 0, 0, 1, 0.5), subQuad(doc.q, 0, 0.5, 1, 1)];
+            // judge ink at full resolution, relative to the paper colour of each half
+            const ink = halves.map((hq) => {
+              const c = warp(
+                  {
+                    src,
+                    quad: subQuad(hq, 0.1, 0.1, 0.9, 0.9).map(([x, y]) => [
+                      x / s,
+                      y / s,
+                    ]),
+                    rot: 0,
+                  },
+                  500,
+                ),
+                g = grayOf(c);
+              const srt = Float32Array.from(g).sort(),
+                paper = srt[Math.floor(srt.length * 0.6)];
+              let k = 0;
+              for (const v of g) if (v < paper - 55) k++;
+              return k / g.length;
+            });
+            const lo = Math.min(...ink),
+              hi = Math.max(...ink);
+            if (lo < 0.002 && hi > 0.01 && hi > 8 * lo) {
+              const i = ink[0] > ink[1] ? 0 : 1;
+              const parts =
+                a >= b
+                  ? [
+                      [0, 0, 0.5, 1],
+                      [0.5, 0, 1, 1],
+                    ]
+                  : [
+                      [0, 0, 1, 0.5],
+                      [0, 0.5, 1, 1],
+                    ];
+              out.push(
+                { q: halves[i], half: true, parent: doc.q, part: parts[i] },
+                {
+                  q: halves[1 - i],
+                  half: true,
+                  blank: true,
+                  parent: doc.q,
+                  part: parts[1 - i],
+                },
+              );
+              continue;
+            }
+          }
+          out.push({ q: doc.q });
+        }
+        const inv = 1 / s;
+        return out.map((o) => {
+          let q = o.q.map(([x, y]) => [x * inv, y * inv]);
+          if (!o.whole && !o.card && !o.half)
+            q = refineQuad(src, q, Math.max(4, 3 * inv + 2));
+          else if (o.half && o.parent) {
+            const pq = refineQuad(
+              src,
+              o.parent.map(([x, y]) => [x * inv, y * inv]),
+              Math.max(4, 3 * inv + 2),
+            );
+            q = subQuad(pq, ...o.part);
+          }
+          return {
+            ...o,
+            q: q.map(([x, y]) => [
+              Math.min(W, Math.max(0, x)),
+              Math.min(H, Math.max(0, y)),
+            ]),
+          };
+        });
+      }
+      /* ---- straight-edge document finder ---- */
+      function edgeMap(gray, w, h) {
+        // Sobel gradient on a lightly smoothed image; keeps the strongest ~12% as edges
+        const g = new Float32Array(w * h);
+        for (let y = 1; y < h - 1; y++)
+          for (let x = 1; x < w - 1; x++) {
+            const j = y * w + x;
+            g[j] =
+              (gray[j] * 4 +
+                gray[j - 1] +
+                gray[j + 1] +
+                gray[j - w] +
+                gray[j + w]) /
+              8;
+          }
+        const mag = new Float32Array(w * h),
+          ang = new Float32Array(w * h);
+        for (let y = 2; y < h - 2; y++)
+          for (let x = 2; x < w - 2; x++) {
+            const j = y * w + x;
+            const gx =
+                g[j - w + 1] +
+                2 * g[j + 1] +
+                g[j + w + 1] -
+                (g[j - w - 1] + 2 * g[j - 1] + g[j + w - 1]),
+              gy =
+                g[j + w - 1] +
+                2 * g[j + w] +
+                g[j + w + 1] -
+                (g[j - w - 1] + 2 * g[j - w] + g[j - w + 1]);
+            mag[j] = Math.hypot(gx, gy);
+            let a = Math.atan2(gy, gx);
+            if (a < 0) a += Math.PI;
+            ang[j] = a;
+          }
+        const sm = [];
+        for (let j = 0; j < w * h; j += 7) sm.push(mag[j]);
+        sm.sort((a, b) => a - b);
+        const T = Math.max(18, sm[Math.floor(sm.length * 0.8)]);
+        const on = new Uint8Array(w * h);
+        for (let y = 2; y < h - 2; y++)
+          for (let x = 2; x < w - 2; x++) {
+            const j = y * w + x;
+            if (mag[j] < T) continue; // thin: keep local maxima across the edge
+            const a = ang[j],
+              dx = Math.round(Math.cos(a)),
+              dy = Math.round(Math.sin(a));
+            if (
+              mag[j] >= mag[j + dy * w + dx] &&
+              mag[j] >= mag[j - dy * w - dx]
+            )
+              on[j] = 1;
+          }
+        return { on, ang, mag, w, h, T };
+      }
+      function edgeSupport(E, q) {
+        // share of each side that runs along a matching edge
+        const { on, ang, w, h } = E;
+        const per = [];
+        for (let i = 0; i < 4; i++) {
+          const P = q[i],
+            Q = q[(i + 1) % 4];
+          const len = dist(P, Q);
+          if (len < 4) {
+            per.push(0);
+            continue;
+          }
+          const ux = (Q[0] - P[0]) / len,
+            uy = (Q[1] - P[1]) / len,
+            nx = -uy,
+            ny = ux;
+          let na = Math.atan2(ny, nx);
+          if (na < 0) na += Math.PI;
+          let hit = 0,
+            n = 0;
+          for (let k = 0; k < 36; k++) {
+            const t = 0.06 + (0.88 * k) / 35;
+            const x0 = P[0] + (Q[0] - P[0]) * t,
+              y0 = P[1] + (Q[1] - P[1]) * t;
+            if (x0 < 2 || y0 < 2 || x0 >= w - 2 || y0 >= h - 2) continue;
+            n++;
+            for (let o = -2; o <= 2; o++) {
+              const x = Math.round(x0 + nx * o),
+                y = Math.round(y0 + ny * o);
+              if (x < 0 || y < 0 || x >= w || y >= h) continue;
+              const j = y * w + x;
+              if (on[j]) {
+                let da = Math.abs(ang[j] - na);
+                if (da > Math.PI / 2) da = Math.PI - da;
+                if (da < 0.3) {
+                  hit++;
+                  break;
+                }
+              }
+            }
+          }
+          per.push(n >= 8 ? hit / n : 0.5);
+        } // a side mostly outside the picture is neither proof nor disproof
+        return {
+          mean: per.reduce((a, b) => a + b, 0) / 4,
+          min: Math.min(...per),
+          per,
+        };
+      }
+      function houghQuads(E, w, h, minA) {
+        const { on, ang } = E,
+          NT = 180,
+          diag = Math.hypot(w, h),
+          NR = Math.ceil(diag) + 1,
+          acc = new Float32Array(NT * 2 * NR);
+        const cs = [],
+          sn = [];
+        for (let t = 0; t < NT; t++) {
+          cs.push(Math.cos((t * Math.PI) / NT));
+          sn.push(Math.sin((t * Math.PI) / NT));
+        }
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            const j = y * w + x;
+            if (!on[j]) continue;
+            const t0 = Math.round((ang[j] / Math.PI) * NT);
+            for (let dt = -3; dt <= 3; dt++) {
+              const t = (t0 + dt + NT) % NT;
+              const r = Math.round(x * cs[t] + y * sn[t]) + NR;
+              acc[t * 2 * NR + r] += 1;
+            }
+          }
+        // peaks
+        const lines = [],
+          minV = 0.07 * Math.min(w, h);
+        const idx = [];
+        for (let i = 0; i < acc.length; i++) if (acc[i] >= minV) idx.push(i);
+        idx.sort((a, b) => acc[b] - acc[a]);
+        for (const i of idx) {
+          if (lines.length >= 32) break;
+          const t = Math.floor(i / (2 * NR)),
+            r = (i % (2 * NR)) - NR;
+          if (
+            lines.some((L) => {
+              let dt = Math.abs(L.t - t);
+              dt = Math.min(dt, NT - dt);
+              return (
+                dt <= 5 &&
+                Math.abs(dt === Math.abs(L.t - t) ? L.r - r : L.r + r) <= 8
+              );
+            })
+          )
+            continue;
+          lines.push({ t, r, th: (t * Math.PI) / NT, v: acc[i] });
+        }
+        const angDiff = (a, b) => {
+          let d = Math.abs(a - b) % Math.PI;
+          return Math.min(d, Math.PI - d);
+        };
+        const meet = (A, B) => {
+          const a1 = Math.cos(A.th),
+            b1 = Math.sin(A.th),
+            a2 = Math.cos(B.th),
+            b2 = Math.sin(B.th),
+            det = a1 * b2 - a2 * b1;
+          if (Math.abs(det) < 1e-6) return null;
+          return [(A.r * b2 - B.r * b1) / det, (a1 * B.r - a2 * A.r) / det];
+        };
+        const pairs = [];
+        for (let i = 0; i < lines.length; i++)
+          for (let j = i + 1; j < lines.length; j++) {
+            const A = lines[i],
+              B = lines[j];
+            if (angDiff(A.th, B.th) > 0.45) continue;
+            const p = [w / 2, h / 2],
+              da = Math.abs(
+                p[0] * Math.cos(A.th) + p[1] * Math.sin(A.th) - A.r,
+              ),
+              db = Math.abs(
+                p[0] * Math.cos(B.th) + p[1] * Math.sin(B.th) - B.r,
+              );
+            // must lie apart (not the same edge twice)
+            const sep = Math.abs(
+              A.r -
+                (Math.cos(A.th) * Math.cos(B.th) +
+                  Math.sin(A.th) * Math.sin(B.th) >
+                0
+                  ? B.r
+                  : -B.r),
+            );
+            if (sep < 0.07 * Math.min(w, h)) continue;
+            pairs.push([A, B]);
+          }
+        const out = [],
+          lim = -0.03;
+        for (let i = 0; i < pairs.length; i++)
+          for (let j = i + 1; j < pairs.length; j++) {
+            const [A1, A2] = pairs[i],
+              [B1, B2] = pairs[j];
+            const d = angDiff((A1.th + A2.th) / 2, (B1.th + B2.th) / 2);
+            if (d < 0.95 || d > 2.2) continue;
+            if ([A1, A2].some((L) => L === B1 || L === B2)) continue;
+            const pts = [
+              meet(A1, B1),
+              meet(A1, B2),
+              meet(A2, B2),
+              meet(A2, B1),
+            ];
+            if (pts.some((p) => !p)) continue;
+            if (
+              pts.some(
+                ([x, y]) =>
+                  x < lim * w ||
+                  y < lim * h ||
+                  x > w * (1 - lim) ||
+                  y > h * (1 - lim),
+              )
+            )
+              continue;
+            const q = orderQuad(pts);
+            if (!q) continue;
+            const area = polyArea(q);
+            if (area < minA) continue;
+            const [a, b] = quadSize(q);
+            const asp = Math.max(a, b) / Math.min(a, b);
+            if (asp > 1.95) continue;
+            if (!cornerAnglesOk(q)) continue;
+            const sp = edgeSupport(E, q);
+            if (!supportOk(sp)) continue;
+            out.push({ q, area, sup: sp.mean, min: sp.min, ok: true });
+          }
+        return out;
+      }
+      function supportOk(sp) {
+        // four clear edges, or three very clear ones (the fourth lost in shadow or a matching background)
+        const top3 =
+          sp.per
+            .slice()
+            .sort((a, b) => b - a)
+            .slice(0, 3)
+            .reduce((a, b) => a + b, 0) / 3;
+        return (
+          (sp.mean >= 0.55 && sp.min >= 0.35) || (top3 >= 0.78 && sp.min >= 0.1)
+        );
+      }
+      function orderQuad(pts) {
+        // TL,TR,BR,BL around the centre; null if not convex
+        const cx = pts.reduce((a, p) => a + p[0], 0) / 4,
+          cy = pts.reduce((a, p) => a + p[1], 0) / 4;
+        const s = pts
+          .slice()
+          .sort(
+            (a, b) =>
+              Math.atan2(a[1] - cy, a[0] - cx) -
+              Math.atan2(b[1] - cy, b[0] - cx),
+          ); // clockwise from left
+        let k = 0,
+          best = 1e18;
+        for (let i = 0; i < 4; i++) {
+          const v = s[i][0] + s[i][1];
+          if (v < best) {
+            best = v;
+            k = i;
+          }
+        }
+        const q = [0, 1, 2, 3].map((i) => s[(k + i) % 4]);
+        for (let i = 0; i < 4; i++) {
+          const a = q[i],
+            b = q[(i + 1) % 4],
+            c = q[(i + 2) % 4];
+          if (
+            (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) <=
+            0
+          )
+            return null;
+        }
+        return q;
+      }
+      function cornerAnglesOk(q) {
+        for (let i = 0; i < 4; i++) {
+          const a = q[(i + 3) % 4],
+            b = q[i],
+            c = q[(i + 1) % 4];
+          const v1 = [a[0] - b[0], a[1] - b[1]],
+            v2 = [c[0] - b[0], c[1] - b[1]];
+          const cosv =
+            (v1[0] * v2[0] + v1[1] * v2[1]) /
+            (Math.hypot(...v1) * Math.hypot(...v2));
+          if (Math.abs(cosv) > 0.62) return false;
+        }
+        return true;
+      }
+      function refineQuad(src, q, R) {
+        // snap each side to the strongest nearby edge in the full-resolution image
+        const S = srcData(src),
+          sw = S.width,
+          sh = S.height,
+          sd = S.data;
+        const G = (x, y) => {
+          x = Math.min(sw - 2, Math.max(0, x));
+          y = Math.min(sh - 2, Math.max(0, y));
+          const xi = x | 0,
+            yi = y | 0,
+            fx = x - xi,
+            fy = y - yi,
+            i = (yi * sw + xi) * 4;
+          const L = (k) =>
+            0.299 * sd[k] + 0.587 * sd[k + 1] + 0.114 * sd[k + 2];
+          return (
+            (L(i) * (1 - fx) + L(i + 4) * fx) * (1 - fy) +
+            (L(i + sw * 4) * (1 - fx) + L(i + sw * 4 + 4) * fx) * fy
+          );
+        };
+        const cx = q.reduce((a, p) => a + p[0], 0) / 4,
+          cy = q.reduce((a, p) => a + p[1], 0) / 4;
+        const lines = [];
+        for (let i = 0; i < 4; i++) {
+          const P = q[i],
+            Q = q[(i + 1) % 4],
+            len = dist(P, Q);
+          const ux = (Q[0] - P[0]) / len,
+            uy = (Q[1] - P[1]) / len;
+          let nx = -uy,
+            ny = ux;
+          const mx = (P[0] + Q[0]) / 2,
+            my = (P[1] + Q[1]) / 2;
+          if ((mx - cx) * nx + (my - cy) * ny < 0) {
+            nx = -nx;
+            ny = -ny;
+          } // outward
+          const pts = [];
+          for (let k = 0; k < 48; k++) {
+            const t = 0.08 + (0.84 * k) / 47,
+              x0 = P[0] + (Q[0] - P[0]) * t,
+              y0 = P[1] + (Q[1] - P[1]) * t;
+            if (x0 < 1 || y0 < 1 || x0 > sw - 2 || y0 > sh - 2) continue;
+            const prof = [];
+            for (let o = -R - 1; o <= R + 1; o++) {
+              let v = 0;
+              for (const e of [-2, 0, 2])
+                v += G(x0 + nx * o + ux * e, y0 + ny * o + uy * e);
+              prof.push(v / 3);
+            }
+            let best = 0,
+              bo = null;
+            for (let o = -R; o <= R; o++) {
+              const i2 = o + R + 1,
+                dlt = Math.abs(prof[i2 + 1] - prof[i2 - 1]);
+              const sc = dlt * (1 - (0.4 * Math.abs(o)) / R);
+              if (sc > best) {
+                best = sc;
+                bo = o;
+              }
+            }
+            if (bo !== null && best > 12)
+              pts.push([x0 + nx * bo, y0 + ny * bo]);
+          }
+          if (pts.length < 12) return q; // not enough evidence: keep the coarse corners
+          lines.push(fitTLS(pts));
+        }
+        const X = (A, B) => {
+          const det = A.dx * B.dy - A.dy * B.dx;
+          if (Math.abs(det) < 1e-9) return null;
+          const t = ((B.x - A.x) * B.dy - (B.y - A.y) * B.dx) / det;
+          return [A.x + A.dx * t, A.y + A.dy * t];
+        };
+        const nq = [
+          X(lines[3], lines[0]),
+          X(lines[0], lines[1]),
+          X(lines[1], lines[2]),
+          X(lines[2], lines[3]),
+        ];
+        if (
+          nq.some((p) => !p) ||
+          nq.some((p, i) => dist(p, q[i]) > 2.5 * R + 4)
+        )
+          return q;
+        return nq;
+      }
+      function fitTLS(pts) {
+        // line through points, least distance; drops points far off and refits
+        let use = pts,
+          L = null;
+        for (let it = 0; it < 3; it++) {
+          const n = use.length;
+          let mx = 0,
+            my = 0;
+          for (const [x, y] of use) {
+            mx += x;
+            my += y;
+          }
+          mx /= n;
+          my /= n;
+          let sxx = 0,
+            syy = 0,
+            sxy = 0;
+          for (const [x, y] of use) {
+            sxx += (x - mx) ** 2;
+            syy += (y - my) ** 2;
+            sxy += (x - mx) * (y - my);
+          }
+          const th = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+          L = { x: mx, y: my, dx: Math.cos(th), dy: Math.sin(th) };
+          const res = pts.map(([x, y]) =>
+            Math.abs((x - L.x) * L.dy - (y - L.y) * L.dx),
+          );
+          const m = median(res);
+          const nu = pts.filter((_, i) => res[i] <= Math.max(1, 2.5 * m));
+          if (nu.length < 6 || nu.length === use.length) break;
+          use = nu;
+        }
+        return L;
+      }
+      function findCards(d, w, h, minA) {
+        // coloured card-shaped areas (e.g. the PAN card on an e-PAN printout)
+        const m = new Uint8Array(w * h);
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4,
+              mx = Math.max(d[i], d[i + 1], d[i + 2]),
+              mn = Math.min(d[i], d[i + 1], d[i + 2]);
+            if (mx - mn > 28 && mx > 110) m[y * w + x] = 1;
+          }
+        const { lab, comps } = label(m, w, h);
+        const out = [];
+        for (const k of comps) {
+          if (k.n < 0.5 * minA) continue;
+          const on = (x, y) =>
+            x >= 0 && y >= 0 && x < w && y < h && lab[y * w + x] === k.id;
+          const q = supportQuad(lab, k, w, fitQuad(on, k, w, h)),
+            qa = polyArea(q),
+            asp = aspect(q);
+          if (asp < 1.45 || asp > 1.72) continue;
+          const fill = spanArea(lab, w, k) / qa;
+          if (fill < 0.7 || fill > 1.25) continue;
+          // must be clearly coloured overall (pale passport paper is not a card)
+          const mp = homography(q);
+          let sat = 0,
+            n = 0;
+          for (let i = 1; i < 20; i++)
+            for (let j = 1; j < 14; j++) {
+              const [x, y] = mp(i / 20, j / 14);
+              const xi = x | 0,
+                yi = y | 0;
+              if (xi < 0 || yi < 0 || xi >= w || yi >= h) continue;
+              const o = (yi * w + xi) * 4;
+              sat +=
+                Math.max(d[o], d[o + 1], d[o + 2]) -
+                Math.min(d[o], d[o + 1], d[o + 2]);
+              n++;
+            }
+          if (!n || sat / n < 38) continue;
+          out.push(q);
+        }
+        return out;
+      }
+
+      function supportQuad(lab, c, w, q) {
+        // outer tangent lines of a card-shaped blob, keeping the tilt of its fitted top edge
+        const k = (q[1][1] - q[0][1]) / Math.max(1, q[1][0] - q[0][0]);
+        let tmin = 1e9,
+          tmax = -1e9,
+          lmin = 1e9,
+          lmax = -1e9;
+        for (let y = c.y0; y <= c.y1; y++)
+          for (let x = c.x0; x <= c.x1; x++)
+            if (lab[y * w + x] === c.id) {
+              const t = y - k * x,
+                l = x + k * y;
+              if (t < tmin) tmin = t;
+              if (t > tmax) tmax = t;
+              if (l < lmin) lmin = l;
+              if (l > lmax) lmax = l;
+            }
+        const X = (b, c2) => {
+          const y = (k * c2 + b) / (1 + k * k);
+          return [c2 - k * y, y];
+        }; // y=kx+b meets x=-ky+c2
+        return [
+          X(tmin, lmin),
+          X(tmin, lmax + 1),
+          X(tmax + 1, lmax + 1),
+          X(tmax + 1, lmin),
+        ];
+      }
+
+      /* ================= recognising a document ================= */
+      function grayOf(c) {
+        const x = c
+          .getContext("2d", { willReadFrequently: true })
+          .getImageData(0, 0, c.width, c.height).data;
+        const g = new Float32Array(c.width * c.height);
+        for (let i = 0, j = 0; j < g.length; i += 4, j++)
+          g[j] = 0.299 * x[i] + 0.587 * x[i + 1] + 0.114 * x[i + 2];
+        return g;
+      }
+      function mrzSide(g, w, h) {
+        // two long lines of dark machine-readable text along one edge
+        const srt = Float32Array.from(g).sort(),
+          T = Math.max(100, Math.min(160, srt[srt.length >> 1] - 70)); // "dark" relative to the paper
+        const wide = (len, get) => {
+          let n = 0;
+          const pos = [];
+          for (let i = 0; i < len; i++)
+            if (get(i) < T) {
+              n++;
+              pos.push(i);
+            }
+          if (n < 0.05 * len) return false;
+          const a = pos[Math.floor(0.08 * n)],
+            b = pos[Math.floor(0.92 * n)];
+          if (b - a <= 0.62 * len) return false;
+          const seg = new Uint8Array(10);
+          for (const p of pos)
+            if (p >= a && p <= b)
+              seg[Math.min(9, Math.floor(((p - a) / (b - a + 1)) * 10))] = 1;
+          return seg.reduce((x, y) => x + y, 0) >= 10;
+        }; // an MRZ line has characters all the way along
+        // lines counted from the edge inwards; MRZ = 2 long text lines close to that edge and nothing else long nearby
+        const side = (depth, len, get) => {
+          const band = Math.round(0.3 * depth),
+            hits = [];
+          for (let t = 0; t < band; t++) hits.push(wide(len, (i) => get(t, i)));
+          const cl = [];
+          let st = -1;
+          for (let t = 0; t <= band; t++) {
+            const on = t < band && hits[t];
+            if (on && st < 0) st = t;
+            if (!on && st >= 0) {
+              if (t - st >= 3) cl.push([st, t]);
+              st = -1;
+            }
+          }
+          if (cl.length !== 2 || cl[0][0] > 0.25 * depth) return 0;
+          const t1 = cl[0][1] - cl[0][0],
+            t2 = cl[1][1] - cl[1][0],
+            gap = cl[1][0] - cl[0][1];
+          if (
+            Math.max(t1, t2) > 1.8 * Math.min(t1, t2) ||
+            gap > 3 * Math.max(t1, t2)
+          )
+            return 0;
+          return t1 + t2 >= 0.03 * depth ? t1 + t2 : 0;
+        };
+        const sc = {
+          bottom: side(h, w, (t, i) => g[(h - 1 - t) * w + i]),
+          top: side(h, w, (t, i) => g[t * w + i]),
+          left: side(w, h, (t, i) => g[i * w + t]),
+          right: side(w, h, (t, i) => g[i * w + (w - 1 - t)]),
+        };
+        const order = Object.entries(sc).sort((a, b) => b[1] - a[1]);
+        return order[0][1] > 0 && order[1][1] === 0
+          ? { side: order[0][0], score: order[0][1] }
+          : null;
+      }
+      const ROT_TO_BOTTOM = { bottom: 0, top: 180, left: 270, right: 90 };
+      function barcode(g, w, h) {
+        // area of parallel bars; on an upright address page it sits near the top
+        const b = 10;
+        let vx = 0,
+          vy = 0,
+          vn = 0,
+          hx = 0,
+          hy = 0,
+          hn = 0;
+        for (let by = 0; by + b < h; by += b)
+          for (let bx = 0; bx + b < w; bx += b) {
+            let ex = 0,
+              ey = 0;
+            for (let y = by; y < by + b; y++)
+              for (let x = bx; x < bx + b; x++) {
+                const j = y * w + x;
+                ex += Math.abs(g[j + 1] - g[j]);
+                ey += Math.abs(g[j + w] - g[j]);
+              }
+            const e = (ex + ey) / (b * b);
+            if (e < 30) continue;
+            if (ex > 4 * ey) {
+              vn++;
+              vx += bx;
+              vy += by;
+            } else if (ey > 4 * ex) {
+              hn++;
+              hx += bx;
+              hy += by;
+            }
+          }
+        if (Math.max(vn, hn) < 6) return null;
+        if (vn >= hn) {
+          const cy = vy / vn + b / 2;
+          return { rot: cy < h / 2 ? 0 : 180 };
+        }
+        const cx = hx / hn + b / 2;
+        return { rot: cx > w / 2 ? 270 : 90 };
+      }
+      function qrSide(g, w, h) {
+        // QR code is on the right of an upright PAN card
+        const dens = (x0, y0, x1, y1) => {
+          let n = 0,
+            k = 0;
+          for (let y = y0; y < y1 - 2; y += 2)
+            for (let x = x0; x < x1 - 2; x += 2) {
+              const j = y * w + x;
+              n++;
+              if (
+                Math.abs(g[j + 2] - g[j]) + Math.abs(g[j + 2 * w] - g[j]) >
+                  80 &&
+                Math.min(g[j], g[j + 2], g[j + 2 * w]) < 90
+              )
+                k++;
+            }
+          return n ? k / n : 0;
+        };
+        let a, bb, r;
+        if (w >= h) {
+          a = dens(0, 0, (w / 3) | 0, h);
+          bb = dens(((2 * w) / 3) | 0, 0, w, h);
+          r = bb > a ? [0, bb, a] : [180, a, bb];
+        } else {
+          a = dens(0, 0, w, (h / 3) | 0);
+          bb = dens(0, ((2 * h) / 3) | 0, w, h);
+          r = a > bb ? [90, a, bb] : [270, bb, a];
+        }
+        return { rot: r[0], has: r[1] > 0.03 && r[1] > 1.6 * r[2], d: r[1] };
+      }
+      function skinShare(c) {
+        // share of skin-coloured pixels in the middle of the picture
+        const x = c
+          .getContext("2d", { willReadFrequently: true })
+          .getImageData(
+            Math.round(c.width * 0.2),
+            Math.round(c.height * 0.15),
+            Math.round(c.width * 0.6),
+            Math.round(c.height * 0.6),
+          ).data;
+        let k = 0,
+          n = 0;
+        for (let i = 0; i < x.length; i += 16) {
+          const r = x[i],
+            g = x[i + 1],
+            b = x[i + 2];
+          n++;
+          if (
+            r > 80 &&
+            r > g &&
+            g > b &&
+            r - b > 25 &&
+            r - g < 90 &&
+            Math.abs(r - g) > 8
+          )
+            k++;
+        }
+        return n ? k / n : 0;
+      }
+      function satMean(c) {
+        // how colourful the document is (PAN cards are blue/pink, passport pages are pale)
+        const x = c
+          .getContext("2d", { willReadFrequently: true })
+          .getImageData(0, 0, c.width, c.height).data;
+        let t = 0,
+          n = 0;
+        for (let i = 0; i < x.length; i += 28) {
+          t +=
+            Math.max(x[i], x[i + 1], x[i + 2]) -
+            Math.min(x[i], x[i + 1], x[i + 2]);
+          n++;
+        }
+        return n ? t / n : 0;
+      }
+      function classify(o, src) {
+        if (o.blank)
+          return { slot: "", label: "Blank passport page", sure: true };
+        const c = warp({ src, quad: o.q, rot: 0 }, 640),
+          w = c.width,
+          h = c.height,
+          g = grayOf(c);
+        const asp = Math.max(w, h) / Math.min(w, h),
+          portrait = h > w;
+        // recognise by content first (shape is unreliable on tilted photos): QR code = PAN, code lines = passport data page, barcode = address page, face = photo
+        const qr = qrSide(g, w, h);
+        if (o.card)
+          return qr.has
+            ? { slot: "pan", rot: qr.rot, sure: true }
+            : {
+                slot: "",
+                label: "Card without QR code (back side?)",
+                sure: false,
+              };
+        const mrz = mrzSide(g, w, h);
+        if (mrz)
+          return { slot: "data", rot: ROT_TO_BOTTOM[mrz.side], sure: true };
+        const bc = barcode(g, w, h);
+        if (bc && asp >= 1.2 && asp < 1.65)
+          return { slot: "addr", rot: bc.rot, sure: true };
+        const skin = skinShare(c),
+          sat = satMean(c);
+        if (!o.half && skin > 0.15 && asp < 1.6)
+          return { slot: "photo", rot: portrait ? 0 : 90, sure: portrait };
+        if (sat >= 40 && asp >= 1.3 && asp <= 1.9)
+          return {
+            slot: "pan",
+            rot: qr.has ? qr.rot : portrait ? 90 : 0,
+            sure: qr.has || !portrait,
+          };
+        if (!o.half && asp >= 1.25 && asp < 1.6 && sat < 40)
+          return skin > 0.02
+            ? { slot: "data", rot: portrait ? 270 : 0, sure: false }
+            : { slot: "addr", rot: portrait ? 270 : 0, sure: false };
+        if (o.half)
+          return { slot: "addr", rot: portrait ? 270 : 0, sure: false };
+        if (asp >= 1.1 && asp < 1.38)
+          return { slot: "photo", rot: portrait ? 0 : 90, sure: portrait };
+        if (asp >= 1.38 && asp < 1.5)
+          return { slot: "addr", rot: portrait ? 270 : 0, sure: false };
+        return { slot: "", label: "Not recognised", sure: false };
+      }
+      function analyzeUpload(src, name, forSlot, meta) {
+        const up = nextUpload++,
+          objs = findObjects(src),
+          made = [];
+        meta = meta || {};
+        for (const o of objs) {
+          const cl = classify(o, src);
+          const it = {
+            id: nextId++,
+            upload: up,
+            name,
+            file: meta.file || name,
+            page: meta.page || 0,
+            src,
+            quad: o.q,
+            rot: cl.rot || 0,
+            slot: cl.slot,
+            label: cl.label || "",
+            sure: cl.sure,
+            whole: !!o.whole,
+            picked: false,
+          };
+          made.push(it);
+        }
+        // pages from the same scan were usually placed the same way round
+        const data = made.find((i) => i.slot === "data" && i.sure);
+        for (const i of made)
+          if (i.slot === "addr" && !i.sure && data) {
+            i.rot = data.rot;
+            i.sure = true;
+          }
+        if (forSlot && !made.some((i) => i.slot === forSlot)) {
+          const cand = made
+            .filter((i) => !i.label.startsWith("Blank"))
+            .sort((a, b) => polyArea(b.quad) - polyArea(a.quad))[0];
+          if (cand) {
+            cand.slot = forSlot;
+            cand.sure = false;
+            cand.label = "";
+            if (SLOT[forSlot].landscape !== undefined) fixAspect(cand);
+          }
+        }
+        for (const i of made) finish(i);
+        items.push(...made);
+        return made;
+      }
+      function fixAspect(it) {
+        // make landscape documents landscape, portrait photos portrait
+        const [a, b] = quadSize(it.quad);
+        const wide = (it.rot / 90) % 2 === 0 ? a >= b : b > a;
+        if (SLOT[it.slot] && SLOT[it.slot].landscape !== wide) {
+          it.rot = (it.rot + 90) % 360;
+          it.sure = false;
+        }
+      }
+      function photoBorder(it) {
+        // white print border: light, even bands on every side (the bottom of a borderless photo is clothing)
+        const c = warp({ src: it.src, quad: it.quad, rot: it.rot }, 500),
+          w = c.width,
+          h = c.height,
+          g = grayOf(c);
+        const band = (get, len, depth) => {
+          let t = Math.round(depth * 0.05);
+          for (; t < depth; t++) {
+            let s = 0,
+              s2 = 0;
+            for (let i = Math.round(len * 0.1); i < len * 0.9; i++) {
+              const v = get(t, i);
+              s += v;
+              s2 += v * v;
+            }
+            const n = Math.round(len * 0.8),
+              m = s / n,
+              sd = Math.sqrt(Math.max(0, s2 / n - m * m));
+            if (m < 195 || sd > 14) break;
+          }
+          return t;
+        };
+        const b = band(
+            (t, i) => g[(h - 1 - t) * w + i],
+            w,
+            Math.round(h * 0.15),
+          ),
+          tp = band((t, i) => g[t * w + i], w, Math.round(h * 0.15)),
+          l = band((t, i) => g[i * w + t], h, Math.round(w * 0.15)),
+          r = band((t, i) => g[i * w + (w - 1 - t)], h, Math.round(w * 0.15));
+        if (b < 0.02 * h || l < 0.02 * w || r < 0.02 * w) return null; // no border all round
+        const th = Math.min(b / h, l / w, r / w) + 0.006; // borders are usually even; the top may run into a white backdrop
+        return {
+          l: Math.min(l / w, th * 1.3) + 0.004,
+          r: Math.min(r / w, th * 1.3) + 0.004,
+          b: b / h + 0.004,
+          t: Math.min(tp / h, th * 1.3) + 0.004,
+        };
+      }
+      function finish(it) {
+        it.round = it.slot === "pan" && !it.whole;
+        if (it.slot === "photo" && !it.inset) {
+          it.inset = true;
+          const t = photoBorder(it);
+          if (t) it.quad = subQuad(it.quad, t.l, t.t, 1 - t.r, 1 - t.b);
+        }
+        it.out = warp(it);
+        const [a, b] = quadSize(it.quad);
+        it.native = Math.min(a, b);
+        it.sharp = sharpness(it.out, Math.max(a, b));
+        const W = it.src.width,
+          H = it.src.height,
+          t = 0.008;
+        const touch = it.quad.map(
+          ([x, y]) =>
+            x <= t * W || x >= W * (1 - t) || y <= t * H || y >= H * (1 - t),
+        );
+        it.edgeTouch =
+          !it.whole && touch.some(Boolean) && !touch.every(Boolean);
+      }
+
+      /* ================= warp ================= */
+      let srcCache = new WeakMap();
+      function srcData(cv) {
+        let d = srcCache.get(cv);
+        if (!d) {
+          d = cv
+            .getContext("2d", { willReadFrequently: true })
+            .getImageData(0, 0, cv.width, cv.height);
+          srcCache.set(cv, d);
+        }
+        return d;
+      }
+      function warp(p, maxSide) {
+        const q = p.quad;
+        let [ow, oh] = quadSize(q);
+        const M = Math.max(ow, oh);
+        const k = maxSide
+          ? maxSide / M
+          : Math.max(1, Math.min(2, 1400 / M)) * Math.min(1, 2000 / M);
+        ow = Math.max(2, Math.round(ow * k));
+        oh = Math.max(2, Math.round(oh * k));
+        const map = homography(q),
+          S = srcData(p.src),
+          sw = S.width,
+          sh = S.height,
+          sd = S.data;
+        const out = new ImageData(ow, oh),
+          od = out.data;
+        for (let y = 0; y < oh; y++) {
+          const v = (y + 0.5) / oh;
+          for (let x = 0; x < ow; x++) {
+            const u = (x + 0.5) / ow;
+            let [sx, sy] = map(u, v);
+            sx -= 0.5;
+            sy -= 0.5;
+            const xi = Math.floor(sx),
+              yi = Math.floor(sy),
+              fx = sx - xi,
+              fy = sy - yi;
+            const x0 = Math.min(sw - 1, Math.max(0, xi)),
+              x1 = Math.min(sw - 1, Math.max(0, xi + 1)),
+              y0 = Math.min(sh - 1, Math.max(0, yi)),
+              y1 = Math.min(sh - 1, Math.max(0, yi + 1));
+            const i00 = (y0 * sw + x0) * 4,
+              i10 = (y0 * sw + x1) * 4,
+              i01 = (y1 * sw + x0) * 4,
+              i11 = (y1 * sw + x1) * 4,
+              o = (y * ow + x) * 4;
+            for (let ch = 0; ch < 3; ch++)
+              od[o + ch] =
+                (sd[i00 + ch] * (1 - fx) + sd[i10 + ch] * fx) * (1 - fy) +
+                (sd[i01 + ch] * (1 - fx) + sd[i11 + ch] * fx) * fy;
+            od[o + 3] = 255;
+          }
+        }
+        let c = document.createElement("canvas");
+        c.width = ow;
+        c.height = oh;
+        c.getContext("2d").putImageData(out, 0, 0);
+        if (p.round) {
+          const r = Math.min(ow, oh) * 0.058,
+            t = document.createElement("canvas");
+          t.width = ow;
+          t.height = oh;
+          const tc = t.getContext("2d");
+          tc.fillStyle = "#fff";
+          tc.fillRect(0, 0, ow, oh);
+          tc.save();
+          tc.beginPath();
+          tc.roundRect(0, 0, ow, oh, r);
+          tc.clip();
+          tc.drawImage(c, 0, 0);
+          tc.restore();
+          c = t;
+        }
+        if (p.rot) {
+          const r = ((p.rot % 360) + 360) % 360,
+            t = document.createElement("canvas");
+          const w2 = r % 180 ? oh : ow,
+            h2 = r % 180 ? ow : oh;
+          t.width = w2;
+          t.height = h2;
+          const tc = t.getContext("2d");
+          tc.translate(w2 / 2, h2 / 2);
+          tc.rotate((r * Math.PI) / 180);
+          tc.drawImage(c, -ow / 2, -oh / 2);
+          c = t;
+        }
+        return c;
+      }
+      function sharpness(c, nativeLong) {
+        // variance of the Laplacian, measured at the document's own resolution
+        const long = Math.max(c.width, c.height),
+          tw =
+            (Math.max(64, Math.min(800, nativeLong || 800)) * c.width) / long;
+        const w = Math.round(tw),
+          h = Math.max(4, Math.round((c.height * w) / c.width));
+        const t = document.createElement("canvas");
+        t.width = w;
+        t.height = h;
+        const tc = t.getContext("2d", { willReadFrequently: true });
+        tc.drawImage(c, 0, 0, w, h);
+        const d = tc.getImageData(0, 0, w, h).data;
+        const g = new Float32Array(w * h);
+        for (let i = 0, j = 0; j < w * h; i += 4, j++)
+          g[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        let s = 0,
+          s2 = 0,
+          n = 0;
+        for (let y = 1; y < h - 1; y++)
+          for (let x = 1; x < w - 1; x++) {
+            const j = y * w + x;
+            const l = g[j - 1] + g[j + 1] + g[j - w] + g[j + w] - 4 * g[j];
+            s += l;
+            s2 += l * l;
+            n++;
+          }
+        const m = s / n;
+        return s2 / n - m * m;
+      }
+
+      /* ================= state ================= */
+      function chosen(slot) {
+        const list = items.filter((p) => p.slot === slot);
+        if (!list.length) return null;
+        return (
+          list.find((p) => p.picked) ||
+          list.reduce((a, b) =>
+            (b.sure && !a.sure) || (b.sure === a.sure && b.sharp > a.sharp)
+              ? b
+              : a,
+          )
+        );
+      }
+      function issuesFor(slot) {
+        const p = chosen(slot),
+          meta = SLOT[slot],
+          out = [];
+        if (!p) {
+          out.push({ lvl: "bad", msg: "missing" });
+          return out;
+        }
+        if (meta.doc) {
+          if (p.sharp < 60)
+            out.push({ lvl: "bad", msg: "blurry, text may be hard to read" });
+          else if (p.sharp < 150)
+            out.push({ lvl: "warn", msg: "slightly soft" });
+        } else if (p.sharp < 1.2)
+          out.push({ lvl: "warn", msg: "looks blurry" });
+        if (p.native < (meta.doc ? 380 : 260))
+          out.push({ lvl: "warn", msg: "low resolution" });
+        if (p.edgeTouch)
+          out.push({
+            lvl: "warn",
+            msg: "touches the edge of the picture, may be cut off",
+          });
+        if (!p.sure && !p.ai)
+          out.push({ lvl: "warn", msg: "check it is upright" });
+        const ai = p.ai;
+        if (ai) {
+          if (ai.cut_off) out.push({ lvl: "bad", msg: "cut off (Claude)" });
+          if (ai.readable === false)
+            out.push({ lvl: "warn", msg: "hard to read (Claude)" });
+          if (ai.note) out.push({ lvl: "warn", msg: ai.note });
+        }
+        const n = items.filter((x) => x.slot === slot).length;
+        if (slot === "pan" && n > 1 && !p.picked)
+          out.push({ lvl: "ok", msg: "best of " + n + " chosen" });
+        return out;
+      }
+      function cleanName(s) {
+        return (s || "")
+          .toUpperCase()
+          .replace(/[^A-Z0-9 ]+/g, " ")
+          .trim()
+          .replace(/\s+/g, "_");
+      }
+      function crossChecks() {
+        const P = chosen("pan"),
+          Q = chosen("data"),
+          pan = P && (P.ai || P.ocr),
+          pp = Q && (Q.ai || Q.ocr),
+          out = [];
+        if (pan && pp) {
+          const a = cleanName(pan.name).split("_").filter(Boolean),
+            b = new Set(cleanName(pp.name).split("_").filter(Boolean));
+          if (a.length && b.size) {
+            const shared = a.filter((t) => b.has(t)).length;
+            const byClaude = !!(P.ai && Q.ai);
+            if (!shared)
+              out.push({
+                lvl: byClaude ? "bad" : "warn",
+                msg: `Names differ: PAN "${pan.name}", passport "${pp.name}"${byClaude ? "" : " (read automatically)"}. These may be different people.`,
+              });
+            else if (shared < Math.min(a.length, b.size))
+              out.push({
+                lvl: "warn",
+                msg: `Names only partly match: PAN "${pan.name}", passport "${pp.name}"`,
+              });
+          }
+          const da = (pan.dob || "").replace(/\D/g, ""),
+            db = (pp.dob || "").replace(/\D/g, "");
+          if (da.length === 8 && db.length === 8 && da !== db)
+            out.push({
+              lvl: P.ai && Q.ai ? "bad" : "warn",
+              msg: `Dates of birth differ: PAN ${pan.dob}, passport ${pp.dob}${P.ai && Q.ai ? "" : " (read automatically)"}`,
+            });
+        }
+        return out;
+      }
+
+      /* ================= rendering ================= */
+      function thumb(c, maxW, maxH) {
+        const s = Math.min(maxW / c.width, maxH / c.height, 1);
+        const t = document.createElement("canvas");
+        t.width = Math.max(1, Math.round(c.width * s));
+        t.height = Math.max(1, Math.round(c.height * s));
+        t.getContext("2d").drawImage(c, 0, 0, t.width, t.height);
+        return t;
+      }
+      const ICON = {
+        trash:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3"/></svg>',
+        upload:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>',
+        crop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/></svg>',
+        save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+        pos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14M3 12h18" opacity=".5"/></svg>',
+        empty:
+          '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke-dasharray="3 2"/><path d="M12 9v6M9 12h6"/></svg>',
+        ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>',
+        warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 6v8M12 18.5v.5"/></svg>',
+        bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+      };
+      function el(tag, cls, html) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (html != null) e.innerHTML = html;
+        return e;
+      }
+      function setSlot(p, slot) {
+        p.slot = slot;
+        p.picked = false;
+        p.label = "";
+        p.ai = null;
+        if (slot) {
+          fixAspect(p);
+        }
+        finish(p);
+      }
+      function typeLabel(p) {
+        return p.slot ? SLOT[p.slot].title : p.label || "Not used";
+      }
+      function displayName(p) {
+        return p.file ? p.file + (p.page ? ` · page ${p.page}` : "") : p.name;
+      }
+      /* ---- delete with undo (the page cannot show confirm dialogs; an undo is kinder anyway) ---- */
+      let undo = null,
+        toastTimer = 0;
+      function deleteItem(p) {
+        const idx = items.indexOf(p);
+        if (idx < 0) return;
+        const prevSlotChoice = items
+          .filter((x) => x.slot === p.slot && x.picked)
+          .map((x) => x.id);
+        items.splice(idx, 1);
+        if (!items.some((x) => x.slot === "pan")) autoNameReset();
+        undo = { p, idx, prevSlotChoice };
+        changed();
+        render();
+        scheduleOCR();
+        toast(
+          `Deleted ${displayName(p)}${p.slot ? " (" + SLOT[p.slot].title + ")" : ""}`,
+          true,
+        );
+      }
+      $("toastUndo").onclick = () => {
+        if (!undo) return;
+        items.splice(Math.min(undo.idx, items.length), 0, undo.p);
+        undo = null;
+        hideToast();
+        changed();
+        render();
+        scheduleOCR();
+      };
+      function toast(t, withUndo) {
+        $("toastText").textContent = t;
+        $("toastUndo").hidden = !withUndo;
+        $("toast").hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(hideToast, withUndo ? 6000 : 3000);
+      }
+      function hideToast() {
+        $("toast").hidden = true;
+        if (!$("toastUndo").hidden) undo = null;
+      }
+      /* ---- render everything from `items` so thumbnails, cards, sheet, checks and PDF never drift apart ---- */
+      function render() {
+        dirty = true;
+        $("trayWrap").hidden = !items.length;
+        const files = new Set(items.map((p) => p.upload)).size,
+          used = items.filter((p) => p.slot).length;
+        $("trayCount").textContent = items.length
+          ? `${items.length} found in ${files} file${files > 1 ? "s" : ""}`
+          : "";
+        const tray = $("tray");
+        tray.textContent = "";
+        for (const p of items) {
+          const tile = el(
+            "div",
+            "tile" + (p.slot ? "" : " unused") + (p.shown ? "" : " new"),
+          );
+          p.shown = true;
+          const c = thumb(p.out, 320, 240);
+          c.className = "tthumb";
+          c.setAttribute("role", "img");
+          c.setAttribute(
+            "aria-label",
+            typeLabel(p) + " from " + displayName(p),
+          );
+          tile.append(c);
+          const nm = el("div", "tname");
+          nm.textContent = displayName(p);
+          nm.title = displayName(p);
+          const sub = el("div", "tsub");
+          sub.textContent = p.slot
+            ? p.sure
+              ? "Detected"
+              : "Best guess"
+            : p.label || "Not used";
+          const sel = document.createElement("select");
+          sel.id = "as" + p.id;
+          sel.setAttribute("aria-label", "Document type for " + displayName(p));
+          [["", "Not used"], ...SLOTS.map((s) => [s.key, s.title])].forEach(
+            ([v, l]) => {
+              const o = document.createElement("option");
+              o.value = v;
+              o.textContent = l;
+              sel.append(o);
+            },
+          );
+          sel.value = p.slot;
+          sel.onchange = () => {
+            setSlot(p, sel.value);
+            changed();
+            render();
+            scheduleOCR();
+          };
+          const del = el("button", "icon-btn", ICON.trash);
+          del.type = "button";
+          del.dataset.tip = "Delete";
+          del.setAttribute(
+            "aria-label",
+            `Delete ${displayName(p)} (${typeLabel(p)})`,
+          );
+          del.onclick = () => deleteItem(p);
+          tile.append(nm, sub, sel, del);
+          tray.append(tile);
+        }
+        const box = $("slots");
+        box.textContent = "";
+        let ready = 0;
+        for (const s of SLOTS) {
+          const p = chosen(s.key),
+            iss = issuesFor(s.key);
+          if (p) ready++;
+          const card = el("article", "slot" + (p ? "" : " missing"));
+          card.setAttribute("aria-label", s.title);
+          const top = el("div", "top"),
+            th = el("div", "sthumb");
+          if (p) {
+            const c = thumb(p.out, 320, 240);
+            th.append(c);
+          } else th.innerHTML = ICON.empty;
+          const info = el("div");
+          info.style.minWidth = "0";
+          const h3 = el("h3");
+          h3.textContent = s.title;
+          const pos = el("div", "pos", ICON.pos);
+          pos.append(document.createTextNode(s.pos + " of the sheet"));
+          info.append(h3, pos);
+          if (p) {
+            const src = el("div", "src");
+            src.textContent = displayName(p);
+            src.title = displayName(p);
+            info.append(src);
+          }
+          const chips = el("div", "chips");
+          if (!p) {
+            const c = el("span", "chip bad");
+            c.textContent = "Not added yet";
+            chips.append(c);
+          } else if (!iss.some((i) => i.lvl !== "ok")) {
+            const c = el("span", "chip ok");
+            c.textContent = "Looks good";
+            chips.append(c);
+          }
+          for (const i of iss) {
+            if (!p && i.msg === "missing") continue;
+            const c = el("span", "chip " + i.lvl);
+            c.textContent = i.msg[0].toUpperCase() + i.msg.slice(1);
+            chips.append(c);
+          }
+          info.append(chips);
+          top.append(th, info);
+          card.append(top);
+          if (p) {
+            const del = el("button", "icon-btn", ICON.trash);
+            del.type = "button";
+            del.dataset.tip = "Delete";
+            del.setAttribute("aria-label", "Delete the " + s.title);
+            del.onclick = () => deleteItem(p);
+            card.append(del);
+          }
+          const acts = el("div", "acts");
+          const up = el("label", "btn", ICON.upload);
+          up.append(document.createTextNode(p ? "Upload New" : "Upload"));
+          const fi = document.createElement("input");
+          fi.type = "file";
+          fi.id = "up_" + s.key;
+          fi.accept = $("fileAll").accept;
+          fi.setAttribute(
+            "aria-label",
+            (p ? "Replace the " : "Upload the ") + s.title,
+          );
+          fi.onchange = () => {
+            const f = [...fi.files];
+            fi.value = "";
+            if (f.length) addFiles(f, s.key, undefined, { replace: !!p });
+          };
+          up.append(fi);
+          acts.append(up);
+          if (p) {
+            const b = el("button", "btn", ICON.crop);
+            b.type = "button";
+            b.append(document.createTextNode("Adjust"));
+            b.onclick = () => openEditor(p);
+            acts.append(b);
+            const sv = el("button", "icon-btn save", ICON.save);
+            sv.type = "button";
+            sv.dataset.tip = "Save cropped image";
+            sv.setAttribute(
+              "aria-label",
+              "Save the cropped " + s.title + " as " + croppedName(p),
+            );
+            sv.onclick = () => saveCropped(p);
+            acts.append(sv);
+          }
+          card.append(acts);
+          const list = items.filter((x) => x.slot === s.key);
+          if (list.length > 1) {
+            const alts = el("div", "alts");
+            const l = el("div", "label");
+            l.textContent = `${list.length} images found · tap one to use it`;
+            alts.append(l);
+            for (const a of list) {
+              const b = el("button", "alt" + (a === p ? " sel" : ""));
+              b.type = "button";
+              b.title = displayName(a);
+              b.setAttribute("aria-label", "Use " + displayName(a));
+              b.setAttribute("aria-pressed", a === p ? "true" : "false");
+              b.append(thumb(a.out, 136, 96));
+              b.onclick = () => {
+                list.forEach((x) => (x.picked = false));
+                a.picked = true;
+                changed();
+                render();
+                scheduleOCR();
+              };
+              alts.append(b);
+            }
+            card.append(alts);
+          }
+          box.append(card);
+        }
+        $("slotCount").textContent = `${ready} of 4 ready`;
+        drawSheet();
+        renderChecks();
+      }
+      function placements() {
+        return SLOTS.map((s) => {
+          const p = chosen(s.key);
+          if (!p) return null;
+          const [x0, y0, x1, y1] = s.box,
+            bw = x1 - x0,
+            bh = y1 - y0;
+          const f = Math.min(bw / p.out.width, bh / p.out.height),
+            w = p.out.width * f,
+            h = p.out.height * f;
+          return {
+            slot: s,
+            p,
+            x: x0 + (bw - w) / 2,
+            y: y0 + (bh - h) / 2,
+            w,
+            h,
+          };
+        }).filter(Boolean);
+      }
+      function drawSheet() {
+        const c = $("sheet"),
+          ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, PAGE.w, PAGE.h);
+        const placed = placements();
+        ctx.imageSmoothingQuality = "high";
+        for (const s of SLOTS) {
+          if (placed.some((q) => q.slot === s)) continue;
+          const [x0, y0, x1, y1] = s.box;
+          ctx.setLineDash([14, 10]);
+          ctx.strokeStyle = "#c4cec9";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#8a9690";
+          ctx.font = "500 38px 'IBM Plex Sans',sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(s.title, (x0 + x1) / 2, (y0 + y1) / 2);
+        }
+        for (const q of placed) ctx.drawImage(q.p.out, q.x, q.y, q.w, q.h);
+        $("sheetFill").textContent = `${placed.length} of 4 placed`;
+      }
+      function faceCrop(slot) {
+        const p = chosen(slot);
+        if (!p) return null;
+        const c = p.out,
+          W = c.width,
+          H = c.height;
+        const r = {
+          pan: [0.03, 0.22, 0.22, 0.4],
+          data: [0.03, 0.08, 0.31, 0.56],
+          photo: [0, 0, 1, 1],
+        }[slot];
+        const t = document.createElement("canvas");
+        const sw = W * r[2],
+          sh = H * r[3];
+        t.height = 168;
+        t.width = Math.round((168 * sw) / sh);
+        t.getContext("2d").drawImage(
+          c,
+          W * r[0],
+          H * r[1],
+          sw,
+          sh,
+          0,
+          0,
+          t.width,
+          t.height,
+        );
+        return t;
+      }
+      /* ---- file names ---- */
+      function today() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+      function pdfNameFrom(n) {
+        const c = cleanName(n);
+        return (c || "ID_SHEET_" + today()) + ".pdf";
+      }
+      function sanitizePdfName(v) {
+        // keeps what the user typed, minus characters that break file names; exactly one .pdf
+        let b = String(v || "")
+          .trim()
+          .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")
+          .replace(/(\.pdf\s*)+$/i, "")
+          .replace(/\s+/g, "_")
+          .replace(/[^A-Za-z0-9_.\-]+/g, "")
+          .replace(/_+/g, "_")
+          .replace(/^[._-]+|[._-]+$/g, "");
+        return (
+          (b || cleanName($("name").value) || "ID_SHEET_" + today()).slice(
+            0,
+            120,
+          ) + ".pdf"
+        );
+      }
+      let fileEdited = false;
+      function currentPdfName() {
+        return fileEdited
+          ? sanitizePdfName($("fileName").value)
+          : pdfNameFrom($("name").value);
+      }
+      function syncFileName() {
+        if (!fileEdited) $("fileName").value = pdfNameFrom($("name").value);
+        $("fileHint").textContent = fileEdited
+          ? "Your file name. Clear it to make it from the name again."
+          : cleanName($("name").value)
+            ? "Made from the name. You can edit it."
+            : "No name yet, so a dated name is used.";
+      }
+      $("fileName").addEventListener("input", () => {
+        fileEdited = $("fileName").value.trim() !== "";
+        syncFileName();
+      });
+      $("fileName").addEventListener("blur", () => {
+        if (fileEdited)
+          $("fileName").value = sanitizePdfName($("fileName").value);
+        syncFileName();
+      });
+      const IMG_EXT = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        webp: "image/webp",
+      };
+      function croppedName(p) {
+        // my-photo.jpg -> my-photo-cropped.jpg ; scan.pdf page 2 -> scan-p2-cropped.jpg
+        const f = p.file || p.name || "document",
+          m = f.match(/^(.*?)(?:\.([A-Za-z0-9]+))?$/);
+        let base = (m[1] || "document").trim(),
+          ext = (m[2] || "").toLowerCase();
+        if (!IMG_EXT[ext]) ext = "jpg";
+        if (p.page) base += "-p" + p.page;
+        base = base
+          .replace(/[\\/:*?"<>|]+/g, "-")
+          .replace(/\s+/g, "-")
+          .replace(/-cropped$/i, "");
+        return base + "-cropped." + ext;
+      }
+      async function saveCropped(p) {
+        const name = croppedName(p),
+          ext = name.split(".").pop(),
+          type = IMG_EXT[ext];
+        setStatus("Preparing " + name + "…");
+        const c = warp({ ...p }, Math.max(...quadSize(p.quad))); // same crop, rotation and corners as the sheet, at the photo's own resolution
+        const blob = await new Promise((r) =>
+          c.toBlob(r, type, type === "image/png" ? undefined : 0.95),
+        );
+        if (!blob) {
+          setStatus("Could not make the image.", "bad");
+          return;
+        }
+        await saveFile(name, blob);
+      }
+      /* ---- checks ---- */
+      function renderChecks() {
+        const ul = $("checks");
+        ul.textContent = "";
+        const add = (lvl, title, detail) => {
+          const li = el("li", lvl);
+          li.append(el("span", "dot", ICON[lvl]));
+          const tx = el("div");
+          const t = el("span", "t");
+          t.textContent = title;
+          tx.append(t);
+          if (detail) {
+            const d = el("span", "d");
+            d.textContent = detail;
+            tx.append(d);
+          }
+          li.append(tx);
+          ul.append(li);
+          li.setAttribute(
+            "aria-label",
+            title +
+              ": " +
+              { ok: "OK", warn: "needs attention", bad: "missing or invalid" }[
+                lvl
+              ] +
+              (detail ? ". " + detail : ""),
+          );
+        };
+        const notes = [];
+        for (const s of SLOTS) {
+          const p = chosen(s.key),
+            iss = issuesFor(s.key).filter((i) => i.lvl !== "ok");
+          if (!p) {
+            add("bad", s.title, "Not added yet");
+            notes.push(s.title.split(" (")[0] + " missing");
+            continue;
+          }
+          if (!iss.length) add("ok", s.title, "Present and clear");
+          else {
+            const d = iss.map((i) => i.msg).join(" · ");
+            add(
+              iss.some((i) => i.lvl === "bad") ? "bad" : "warn",
+              s.title,
+              d[0].toUpperCase() + d.slice(1),
+            );
+            notes.push(
+              s.title.split(" (")[0] + " " + iss.map((i) => i.msg).join(", "),
+            );
+          }
+        }
+        for (const c of crossChecks()) {
+          add(
+            c.lvl,
+            c.lvl === "bad" ? "Details don't match" : "Details may not match",
+            c.msg,
+          );
+          notes.push(c.msg.replace(/\.$/, ""));
+        }
+        const nm = cleanName($("name").value);
+        if (!nm) {
+          add(
+            "bad",
+            "Name",
+            "Type the name exactly as printed on the PAN card",
+          );
+          notes.push("PAN holder name not entered");
+        }
+        const haveFaces =
+          ["pan", "data", "photo"].filter((k) => chosen(k)).length >= 2;
+        if (haveFaces && !$("same").checked) {
+          add(
+            "warn",
+            "Same person",
+            "Compare the faces below and tick the box if they match",
+          );
+          notes.push("photo match not confirmed");
+        } else if (haveFaces) add("ok", "Same person", "Confirmed by you");
+        const f = $("faces");
+        f.textContent = "";
+        for (const [k, l] of [
+          ["pan", "PAN"],
+          ["data", "Passport"],
+          ["photo", "Photo"],
+        ]) {
+          const c = faceCrop(k);
+          if (!c) continue;
+          const fig = el("figure");
+          fig.append(c);
+          const cap = el("figcaption");
+          cap.textContent = l;
+          fig.append(cap);
+          f.append(fig);
+        }
+        $("same").closest("label").hidden = !haveFaces;
+        syncFileName();
+        $("note").textContent = notes.length
+          ? notes.join("; ") + "."
+          : "No issues: all four documents present, clear and matching.";
+        $("dl").disabled = $("share").disabled = !placements().length;
+      }
+      /* ---- unsaved-work tracking for "Start next person" ---- */
+      let dirty = false;
+      function changed() {
+        dirty = true;
+      }
+
+      /* ================= Claude check (only inside claude.ai) ================= */
+      let sampleFn = null,
+        aiCtl = null,
+        aiTimer = 0;
+      (async () => {
+        if (!window.claude || typeof window.claude.use !== "function") return;
+        try {
+          const s = await window.claude.use("sample");
+          if (!s) return;
+          const lim = await s.limits().catch(() => null);
+          if (!lim || !lim.images) return;
+          sampleFn = s;
+          $("aiRow").hidden = false;
+          if (items.length) scheduleAI();
+        } catch (e) {}
+      })();
+      function scheduleAI() {
+        if (!sampleFn) return;
+        clearTimeout(aiTimer);
+        aiTimer = setTimeout(runAI, 400);
+      }
+      const AI_TYPES = {
+        pan_card_front: "pan",
+        passport_data_page: "data",
+        passport_address_page: "addr",
+        passport_size_photo: "photo",
+      };
+      async function runAI() {
+        if (!sampleFn) return;
+        const filled = SLOTS.map((s) => ({ s, p: chosen(s.key) })).filter(
+          (x) => x.p,
+        );
+        if (!filled.length) return;
+        if (aiCtl) aiCtl.abort();
+        const ctl = (aiCtl = new AbortController());
+        $("aiStatus").textContent = "Claude is checking the documents…";
+        $("aiGo").disabled = true;
+        try {
+          const blobs = await Promise.all(
+            filled.map(
+              ({ p }) =>
+                new Promise((r) =>
+                  thumb(p.out, 1100, 1100).toBlob(r, "image/jpeg", 0.88),
+                ),
+            ),
+          );
+          const list = filled
+            .map(({ s }, i) => `Image ${i + 1}: placed as "${s.title}"`)
+            .join("\n");
+          const prompt = `These images are crops from scanned Indian identity documents being assembled into one KYC sheet.\n${list}\n\nFor EACH image, look at it as shown and report:\n- type: one of pan_card_front, pan_card_back, epan_full_page, passport_data_page, passport_address_page, passport_blank_page, passport_size_photo, other\n- rotate_cw: degrees clockwise (0, 90, 180 or 270) needed to make the text and face upright\n- name: for pan_card_front the Name field exactly as printed; for passport_data_page the given name(s) then the surname, as printed; otherwise ""\n- dob: date of birth as printed (DD/MM/YYYY), or ""\n- readable: true if all printed text is clearly legible\n- cut_off: true if part of the document is missing at an edge\n- note: a very short note of any other problem (glare, wrong document, more than one document in the crop), or ""\nDo not guess unreadable text; use "" instead.\nReply with only JSON: {"items":[{"image":1,"type":"","rotate_cw":0,"name":"","dob":"","readable":true,"cut_off":false,"note":""}]}`;
+          const res = await sampleFn.json(prompt, {
+            images: blobs,
+            signal: ctl.signal,
+          });
+          if (ctl !== aiCtl) return;
+          const arr = Array.isArray(res && res.items) ? res.items : [];
+          let changed = 0;
+          arr.forEach((r) => {
+            const f = filled[(Number(r.image) || 0) - 1];
+            if (!f) return;
+            const p = f.p;
+            const rot = [0, 90, 180, 270].includes(Number(r.rotate_cw))
+              ? Number(r.rotate_cw)
+              : 0;
+            const type = String(r.type || "");
+            p.ai = {
+              type,
+              name: String(r.name || "").trim(),
+              dob: String(r.dob || "").trim(),
+              readable: r.readable !== false,
+              cut_off: !!r.cut_off,
+              note: String(r.note || "").slice(0, 120),
+            };
+            if (rot) {
+              p.rot = (p.rot + rot) % 360;
+              p.sure = true;
+              finish(p);
+              changed++;
+            }
+            const want = AI_TYPES[type];
+            if (want && want !== p.slot) {
+              const keep = p.ai;
+              setSlot(p, want);
+              p.ai = keep;
+              changed++;
+            } else if (!want && type) {
+              const keep = p.ai;
+              p.slot = "";
+              p.label = "Claude: " + type.replace(/_/g, " ");
+              p.ai = keep;
+              changed++;
+            }
+            p.sure = true;
+          });
+          const panName = chosen("pan")?.ai?.name;
+          if (panName)
+            fillName(
+              panName,
+              "Read by Claude from the PAN card. Check it matches the card.",
+            );
+          $("aiStatus").textContent =
+            "Checked by Claude" +
+            (changed
+              ? ` (${changed} correction${changed > 1 ? "s" : ""} applied)`
+              : "") +
+            ". Still compare the faces yourself.";
+          render();
+          scheduleOCR();
+        } catch (e) {
+          if (e && e.code === "cancelled") return;
+          const msg =
+            {
+              not_granted: "Claude check was not allowed.",
+              rate_limited:
+                "Claude is busy or your usage limit is reached. Try again later.",
+              refused: "Claude could not check these images.",
+              invalid_json: "Claude's answer could not be read. Try again.",
+            }[e && e.code] || "Claude check failed. Try again.";
+          $("aiStatus").textContent = msg;
+          if (
+            e &&
+            [
+              "not_granted",
+              "sampling_disabled",
+              "capability_disabled",
+              "capability_removed",
+              "images_unavailable",
+              "not_declared",
+            ].includes(e.code)
+          ) {
+            sampleFn = null;
+          }
+        } finally {
+          if (ctl === aiCtl) $("aiGo").disabled = false;
+        }
+      }
+      $("aiGo").onclick = () => {
+        for (const p of items) p.ai = null;
+        runAI();
+      };
+
+      /* ================= reading text on the card (OCR, runs in this browser) ================= */
+      function autoNameReset() {
+        if (autoName && cleanName($("name").value) === cleanName(autoName)) {
+          $("name").value = "";
+          $("nameSrc").textContent = "";
+        }
+        autoName = "";
+        nameTyped = false;
+      }
+      let nameTyped = false;
+      function fillName(n, src) {
+        const cur = $("name").value.trim();
+        if (!cur || !nameTyped || cleanName(cur) === cleanName(autoName)) {
+          $("name").value = n;
+          autoName = n;
+          nameTyped = false;
+          $("nameSrc").textContent = src;
+          renderChecks();
+        } else
+          $("nameSrc").textContent =
+            `The card reads "${n}". Your typed name was kept.`;
+      }
+      let ocrWorker = null,
+        ocrFailed = 0,
+        ocrError = "",
+        ocrTimer = 0,
+        ocrBusy = false;
+      function loadScript(src) {
+        return new Promise((ok, no) => {
+          const s = document.createElement("script");
+          s.src = src;
+          s.onload = ok;
+          s.onerror = () =>
+            no(
+              new Error(
+                "could not load " +
+                  src
+                    .replace(/^https:\/\/[^/]+/, "")
+                    .split("/")
+                    .pop() +
+                  (src.startsWith("http") ? " from the CDN" : ""),
+              ),
+            );
+          document.head.append(s);
+        });
+      }
+      const withTimeout = (pr, ms, what) =>
+        Promise.race([
+          pr,
+          new Promise((_, no) =>
+            setTimeout(() => no(new Error(what + " timed out")), ms),
+          ),
+        ]);
+      async function getOCR() {
+        if (ocrWorker) return ocrWorker;
+        if (ocrFailed && Date.now() - ocrFailed < 20000) return null; // retry a failed start, but not in a tight loop
+        const abs = (p) => new URL(p, location.href).href,
+          errs = [];
+        // 1) the copy published next to the page (claude.ai), 2) the same version from a public CDN (downloaded copy, or if 1 fails)
+        const attempts = [];
+        if (location.protocol !== "file:")
+          attempts.push(async () => {
+            if (!window.Tesseract) await loadScript("ocr/tesseract.min.js");
+            const r = await fetch("ocr/lang/eng.traineddata.txt");
+            if (!r.ok) throw new Error("language file " + r.status);
+            const bin = atob((await r.text()).trim()),
+              bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return Tesseract.createWorker([{ code: "eng", data: bytes }], 1, {
+              workerPath: abs("ocr/worker.min.js"),
+              corePath: abs("ocr/core/"),
+              workerBlobURL: false,
+              cacheMethod: "none",
+              errorHandler: () => {},
+            });
+          });
+        if (location.protocol !== "file:")
+          attempts.push(async () => {
+            // same bundled files, but started through a blob worker (some sandboxes only allow those)
+            if (!window.Tesseract) await loadScript("ocr/tesseract.min.js");
+            const r = await fetch("ocr/lang/eng.traineddata.txt");
+            if (!r.ok) throw new Error("language file " + r.status);
+            const bin = atob((await r.text()).trim()),
+              bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return Tesseract.createWorker([{ code: "eng", data: bytes }], 1, {
+              workerPath: abs("ocr/worker.min.js"),
+              corePath: abs("ocr/core/"),
+              workerBlobURL: true,
+              cacheMethod: "none",
+              errorHandler: () => {},
+            });
+          });
+        attempts.push(async () => {
+          if (!window.Tesseract)
+            await loadScript(
+              "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
+            );
+          return Tesseract.createWorker("eng", 1, {
+            workerPath:
+              "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js",
+            corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/",
+            langPath:
+              "https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int",
+            cacheMethod: "none",
+            errorHandler: () => {},
+          });
+        });
+        for (const go of attempts) {
+          try {
+            ocrWorker = await withTimeout(go(), 45000, "starting the reader");
+            ocrFailed = 0;
+            ocrError = "";
+            return ocrWorker;
+          } catch (e) {
+            errs.push(String((e && e.message) || e).slice(0, 120));
+          }
+        }
+        ocrFailed = Date.now();
+        ocrError = errs.join(" / ");
+        return null;
+      }
+      function region(c, x0, y0, x1, y1, targetW, contrast = 1.4) {
+        // cut out part of a document and enlarge it in grey for reading
+        const sw = c.width * (x1 - x0),
+          sh = c.height * (y1 - y0),
+          k = targetW / sw,
+          t = document.createElement("canvas");
+        t.width = Math.round(sw * k);
+        t.height = Math.round(sh * k);
+        const x = t.getContext("2d");
+        x.filter = `grayscale(1) contrast(${contrast})`;
+        x.drawImage(
+          c,
+          c.width * x0,
+          c.height * y0,
+          sw,
+          sh,
+          0,
+          0,
+          t.width,
+          t.height,
+        );
+        return t;
+      }
+      const LETTERS = /[^A-Z ]/g;
+      function parsePAN(text) {
+        const lines = text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        let name = "",
+          dob = "";
+        for (let i = 0; i < lines.length && !name; i++) {
+          if (/\bname\b/i.test(lines[i]) && !/fath|ther/i.test(lines[i])) {
+            for (let j = i + 1; j < Math.min(lines.length, i + 3); j++) {
+              if (/name|fath|birth|date/i.test(lines[j])) break;
+              const up = lines[j]
+                .replace(/[^A-Za-z ]/g, " ")
+                .replace(/\b[a-z]\w*\b/g, " ")
+                .replace(LETTERS, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+              const words = up.split(" ").filter((w) => w.length >= 2);
+              if (words.length && words.join("").length >= 4) {
+                name = words.join(" ");
+                break;
+              }
+            }
+          }
+        }
+        const m = text.match(
+          /\b(\d{2})\s*[\/\-.]\s*(\d{2})\s*[\/\-.]\s*(\d{4})\b/,
+        );
+        if (m) dob = `${m[1]}/${m[2]}/${m[3]}`;
+        if (!name) {
+          // older cards print no "Name" label: holder's name is the first line of capitals under the header, then the father's name, then the date
+          const STOP =
+            /INCOME|TAX|DEPARTMENT|GOVT|INDIA|PERMANENT|ACCOUNT|NUMBER|CARD|SIGNATURE|BIRTH|DATE|FATHER/;
+          const di = lines.findIndex((l) =>
+            /\d{2}\s*[\/.-]\s*\d{2}\s*[\/.-]\s*\d{4}/.test(l),
+          );
+          const cand = lines
+            .slice(0, di > 0 ? di : lines.length)
+            .map((l) =>
+              /\d/.test(l)
+                ? ""
+                : l
+                    .replace(/[^A-Za-z ]/g, " ")
+                    .split(/\s+/)
+                    .filter((w) => w.length >= 2 && w === w.toUpperCase())
+                    .join(" "),
+            )
+            .filter(
+              (l) => l.split(" ").length >= 2 && l.length >= 6 && !STOP.test(l),
+            );
+          if (cand.length >= 2) name = cand[cand.length - 2]; // the two lines above the date: holder, then father
+        }
+        return { name, dob };
+      }
+      function mrzCheck(s) {
+        const v = (c) =>
+            c === "<" ? 0 : /\d/.test(c) ? +c : c.charCodeAt(0) - 55,
+          w = [7, 3, 1];
+        let t = 0;
+        for (let i = 0; i < s.length; i++) t += v(s[i]) * w[i % 3];
+        return t % 10;
+      }
+      function parseMRZ(text) {
+        const lines = text
+          .replace(/ /g, "")
+          .split("\n")
+          .filter((l) => l.length > 25);
+        const l1 =
+            lines.find((l) => /^P.?IND/.test(l)) ||
+            lines.find(
+              (l) =>
+                /IND/.test(l) && /<</.test(l) && !/^[A-Z0-9<]{9}\d/.test(l),
+            ),
+          l2 = lines.find(
+            (l) => l !== l1 && /^[A-Z0-9<]{9}\d[A-Z<]{3}\d{6}/.test(l),
+          );
+        let name = "",
+          dob = "",
+          raw = "";
+        if (l1) {
+          raw = l1.replace(/^.*?IND/, "").replace(/[^A-Z]/g, "");
+          const parts = l1.slice(5).split(/<<+/).filter(Boolean);
+          const sur = (parts[0] || "").replace(/</g, " "),
+            giv = (parts[1] || "").replace(/</g, " ");
+          name = [giv, sur]
+            .join(" ")
+            .replace(LETTERS, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        }
+        if (l2) {
+          const d = l2.slice(13, 19),
+            ck = l2[19];
+          if (/^\d{6}$/.test(d) && String(mrzCheck(d)) === ck) {
+            const yy = +d.slice(0, 2),
+              cy = new Date().getFullYear() % 100;
+            dob = `${d.slice(4, 6)}/${d.slice(2, 4)}/${(yy > cy ? 1900 : 2000) + yy}`;
+          }
+        }
+        return { name, dob, raw };
+      }
+      function parseVIZ(text, mrzRaw) {
+        // printed fields on the passport data page: "Surname" / "Given Name(s)" with the value on the next line
+        const lines = text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const val = (re) => {
+          for (let i = 0; i < lines.length; i++)
+            if (re.test(lines[i])) {
+              for (let j = i + 1; j < Math.min(lines.length, i + 3); j++) {
+                const up = lines[j]
+                  .replace(/[^A-Za-z ]/g, " ")
+                  .replace(/\b[a-z]\w*\b/g, " ")
+                  .replace(LETTERS, " ")
+                  .replace(/\s+/g, " ")
+                  .trim();
+                const words = up.split(" ").filter((w) => w.length >= 2);
+                if (words.length) return words.join(" ");
+              }
+            }
+          return "";
+        };
+        // a printed word only counts as part of the name if it also appears in the machine-readable line (which holds nothing but the name)
+        if (mrzRaw && mrzRaw.length >= 4) {
+          const words = [
+            ...new Set(
+              text
+                .toUpperCase()
+                .replace(/[^A-Z ]/g, " ")
+                .split(/\s+/)
+                .filter(
+                  (w) =>
+                    w.length >= 2 &&
+                    ![
+                      "IND",
+                      "INDIAN",
+                      "INDIA",
+                      "REPUBLIC",
+                      "OF",
+                      "TYPE",
+                      "CODE",
+                      "NAME",
+                      "GIVEN",
+                      "SURNAME",
+                      "NAMES",
+                    ].includes(w),
+                ),
+            ),
+          ];
+          const hits = words
+            .map((w) => ({ w, i: mrzRaw.indexOf(w) }))
+            .filter((x) => x.i >= 0 && x.w.length >= 3)
+            .sort((a, b) => a.i - b.i);
+          // drop words that are just pieces of a longer hit
+          const keep = hits.filter(
+            (x) =>
+              !hits.some(
+                (y) => y !== x && y.w.length > x.w.length && y.w.includes(x.w),
+              ),
+          );
+          if (keep.length) return keep.map((x) => x.w).join(" ");
+        }
+        const sur = val(/surname/i),
+          giv = val(/given/i);
+        if (sur || giv) return [giv, sur].filter(Boolean).join(" ");
+        return "";
+      }
+      function scheduleOCR() {
+        clearTimeout(ocrTimer);
+        ocrTimer = setTimeout(runOCR, 200);
+      }
+      async function runOCR() {
+        if (ocrBusy) {
+          scheduleOCR();
+          return;
+        }
+        const jobs = [
+          ["pan", chosen("pan")],
+          ["data", chosen("data")],
+        ].filter(
+          ([, p]) =>
+            p &&
+            p.ocrKey !== p.id + ":" + p.rot + ":" + p.quad.flat().join(","),
+        );
+        if (!jobs.length) return;
+        ocrBusy = true;
+        const prev = $("status").textContent;
+        try {
+          if (!ocrWorker)
+            setStatus("Loading the text reader (first time only)…");
+          const wk = await getOCR();
+          if (!wk) {
+            if (!$("name").value.trim())
+              $("nameSrc").textContent =
+                "Automatic name reading isn't available here" +
+                (sampleFn
+                  ? "; use Check with Claude, or type the name."
+                  : ". Type the name as printed on the PAN card.") +
+                (ocrError ? " (" + ocrError + ")" : "");
+            return;
+          }
+          for (const [slot, p] of jobs) {
+            const key = p.id + ":" + p.rot + ":" + p.quad.flat().join(",");
+            if (slot === "pan") {
+              setStatus("Reading the name on the PAN card…");
+              // a few crops and settings; the first one that yields a name wins
+              const tries = [
+                [0, 0.3, 0.66, 1, 1500, "6", 1.4],
+                [0, 0.25, 0.7, 1, 1700, "4", 1],
+                [0, 0.3, 0.6, 1, 1200, "11", 1.8],
+                [0, 0, 1, 1, 2000, "4", 1.2],
+              ];
+              p.ocr = { name: "", dob: "" };
+              for (const [x0, y0, x1, y1, tw, psm, ct] of tries) {
+                await wk.setParameters({
+                  tessedit_char_whitelist: "",
+                  tessedit_pageseg_mode: psm,
+                });
+                const r = await wk.recognize(
+                  region(p.out, x0, y0, x1, y1, tw, ct),
+                );
+                const got = parsePAN(r.data.text);
+                if (!p.ocr.dob && got.dob) p.ocr.dob = got.dob;
+                if (got.name) {
+                  p.ocr.name = got.name;
+                  break;
+                }
+              }
+              p.ocrKey = key;
+              if (p.ocr.name && chosen("pan") === p)
+                fillName(
+                  p.ocr.name,
+                  "Read from the PAN card. Check it matches the card exactly.",
+                  true,
+                );
+            } else {
+              setStatus("Reading the passport's machine-readable lines…");
+              await wk.setParameters({
+                tessedit_char_whitelist:
+                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<",
+                tessedit_pageseg_mode: "6",
+              });
+              const r = await wk.recognize(region(p.out, 0, 0.7, 1, 1, 1800));
+              const mrz = parseMRZ(r.data.text);
+              setStatus("Reading the passport's name fields…");
+              await wk.setParameters({
+                tessedit_char_whitelist: "",
+                tessedit_pageseg_mode: "6",
+              });
+              const v = await wk.recognize(
+                region(p.out, 0.28, 0.1, 0.8, 0.75, 1500),
+              );
+              p.ocr = { name: parseVIZ(v.data.text, mrz.raw), dob: mrz.dob };
+              p.ocrKey = key;
+            }
+          }
+          if (!$("name").value.trim() && chosen("pan"))
+            $("nameSrc").textContent =
+              "The name could not be read from this PAN image. Type it as printed on the card, or tap Read again after fixing the crop.";
+        } catch (e) {
+          $("nameSrc").textContent =
+            "Reading the card failed (" +
+            String((e && e.message) || e).slice(0, 100) +
+            "). Tap Read again or type the name.";
+        } finally {
+          ocrBusy = false;
+          if (/^(Loading the text|Reading)/.test($("status").textContent))
+            setStatus(prev && !/^(Loading|Reading)/.test(prev) ? prev : "");
+          render();
+        }
+      }
+
+      /* ================= editor ================= */
+      /* The crop is four corners in ORIGINAL image pixels (ed.quad: TL,TR,BR,BL), so perspective correction keeps working.
+   The workspace only changes how that image is shown (ed.view: z = screen px per image px, ox/oy = screen offset).
+   Handles: 4 corners move freely; 4 edges slide their side along its normal (width or height only); inside = move; outside = pan. */
+      let ed = null;
+      const HANDLES = ["move", "tl", "t", "tr", "r", "br", "b", "bl", "l"];
+      const CORNER = { tl: 0, tr: 1, br: 2, bl: 3 },
+        EDGE = { t: 0, r: 1, b: 2, l: 3 }; // edge k runs from corner k to corner k+1
+      const reduceMotion = matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      function openEditor(p) {
+        ed = {
+          p,
+          W: p.src.width,
+          H: p.src.height,
+          quad: null,
+          rot: p.rot,
+          round: p.round,
+          view: { z: 1, ox: 0, oy: 0, fit: 1 },
+          ptrs: new Map(),
+          drag: null,
+          pinch: null,
+          hover: null,
+          kb: "move",
+          anim: 0,
+          raf: 0,
+          prevRaf: 0,
+          dpr: 1,
+          cw: 0,
+          ch: 0,
+        };
+        ed.quad = p.quad.map(clampPt);
+        $("edTitle").textContent = "Adjust: " + SLOT[p.slot].title;
+        $("edRoundL").hidden = p.slot !== "pan";
+        $("edRound").checked = ed.round;
+        $("edRoundL").classList.toggle("on", ed.round);
+        $("editor").hidden = false;
+        ed.prevOverflow = document.documentElement.style.overflow;
+        document.documentElement.style.overflow = "hidden"; // no page scroll behind
+        sizeCanvas();
+        fitView(false);
+        draw();
+        schedulePreview();
+        ed.ro = new ResizeObserver(() => {
+          if (!ed) return;
+          const wasFit = Math.abs(ed.view.z - ed.view.fit) < 1e-6;
+          sizeCanvas();
+          computeFit();
+          if (wasFit) fitView(false);
+          else clampView();
+          draw();
+        });
+        ed.ro.observe($("work"));
+        $("edCanvas").focus({ preventScroll: true });
+      }
+      function closeEditor() {
+        if (!ed) return;
+        ed.ro && ed.ro.disconnect();
+        cancelAnimationFrame(ed.anim);
+        document.documentElement.style.overflow = ed.prevOverflow || "";
+        $("editor").hidden = true;
+        $("loupe").hidden = true;
+        ed = null;
+      }
+      function sizeCanvas() {
+        const c = $("edCanvas"),
+          r = $("work").getBoundingClientRect();
+        ed.dpr = Math.min(3, window.devicePixelRatio || 1);
+        ed.cw = Math.max(1, r.width);
+        ed.ch = Math.max(1, r.height);
+        c.width = Math.round(ed.cw * ed.dpr);
+        c.height = Math.round(ed.ch * ed.dpr);
+      }
+      const touchUI = () => matchMedia("(pointer: coarse)").matches;
+      function computeFit() {
+        const pad = touchUI() ? 28 : 36;
+        const v = ed.view;
+        v.fit = Math.min(
+          (ed.cw - 2 * pad - (ed.cw < 600 ? 44 : 0)) / ed.W,
+          (ed.ch - 2 * pad) / ed.H,
+        );
+        v.min = v.fit * 0.9;
+        v.max = Math.max(v.fit * 12, 4);
+      }
+      function fitView(animate) {
+        computeFit();
+        const v = ed.view,
+          z = v.fit,
+          ox = (ed.cw - ed.W * z) / 2 - (ed.cw < 600 ? 16 : 0),
+          oy = (ed.ch - ed.H * z) / 2;
+        animateView(z, ox, oy, animate);
+      }
+      function clampView() {
+        const v = ed.view,
+          iw = ed.W * v.z,
+          ih = ed.H * v.z,
+          m = Math.min(ed.cw, ed.ch) * 0.35;
+        v.ox =
+          iw <= ed.cw
+            ? Math.min(Math.max(v.ox, -iw * 0.25), ed.cw - iw * 0.75)
+            : Math.min(m, Math.max(ed.cw - iw - m, v.ox));
+        v.oy =
+          ih <= ed.ch
+            ? Math.min(Math.max(v.oy, -ih * 0.25), ed.ch - ih * 0.75)
+            : Math.min(m, Math.max(ed.ch - ih - m, v.oy));
+      }
+      function animateView(z, ox, oy, animate) {
+        const v = ed.view;
+        cancelAnimationFrame(ed.anim);
+        if (!animate || reduceMotion) {
+          v.z = z;
+          v.ox = ox;
+          v.oy = oy;
+          clampView();
+          updateZoomLabel();
+          draw();
+          return;
+        }
+        const z0 = v.z,
+          x0 = v.ox,
+          y0 = v.oy,
+          t0 = performance.now(),
+          D = 180;
+        const step = (t) => {
+          if (!ed) return;
+          const k = Math.min(1, (t - t0) / D),
+            e = 1 - Math.pow(1 - k, 3);
+          // interpolate in log-zoom so the point under the screen centre glides smoothly
+          v.z = z0 * Math.pow(z / z0, e);
+          v.ox = x0 + (ox - x0) * e;
+          v.oy = y0 + (oy - y0) * e;
+          updateZoomLabel();
+          draw();
+          if (k < 1) ed.anim = requestAnimationFrame(step);
+          else clampView();
+        };
+        ed.anim = requestAnimationFrame(step);
+      }
+      function zoomAt(sx, sy, f, animate) {
+        const v = ed.view,
+          z = Math.min(v.max, Math.max(v.min, v.z * f)),
+          ix = (sx - v.ox) / v.z,
+          iy = (sy - v.oy) / v.z;
+        if (animate) {
+          animateView(z, sx - ix * z, sy - iy * z, true);
+        } else {
+          v.z = z;
+          v.ox = sx - ix * z;
+          v.oy = sy - iy * z;
+          clampView();
+          updateZoomLabel();
+        }
+      }
+      function updateZoomLabel() {
+        const r = ed.view.z / ed.view.fit;
+        $("zFit").textContent =
+          Math.abs(r - 1) < 0.02 ? "Fit" : Math.round(r * 100) + "%";
+      }
+      const toS = ([x, y]) => [
+        ed.view.ox + x * ed.view.z,
+        ed.view.oy + y * ed.view.z,
+      ];
+      const toI = (sx, sy) => [
+        (sx - ed.view.ox) / ed.view.z,
+        (sy - ed.view.oy) / ed.view.z,
+      ];
+      const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      function handlePoint(h, q) {
+        q = q || ed.quad;
+        if (h in CORNER) return q[CORNER[h]];
+        if (h in EDGE) {
+          const k = EDGE[h];
+          return mid(q[k], q[(k + 1) % 4]);
+        }
+        return mid(mid(q[0], q[2]), mid(q[1], q[3]));
+      }
+      function inPoly(pt, q) {
+        let c = false;
+        for (let i = 0, j = 3; i < 4; j = i++) {
+          const [xi, yi] = q[i],
+            [xj, yj] = q[j];
+          if (
+            yi > pt[1] !== yj > pt[1] &&
+            pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi
+          )
+            c = !c;
+        }
+        return c;
+      }
+      function hitTest(sx, sy, touch) {
+        const R = touch ? 28 : 14,
+          S = ed.quad.map(toS);
+        let best = null,
+          bd = 1e9;
+        for (const h of ["tl", "tr", "br", "bl"]) {
+          const d = dist(S[CORNER[h]], [sx, sy]);
+          if (d < R && d < bd) {
+            bd = d;
+            best = h;
+          }
+        }
+        if (best) return best;
+        // edges: grab anywhere along the side (not only at the midpoint), away from the corners
+        for (const h of ["t", "r", "b", "l"]) {
+          const k = EDGE[h],
+            A = S[k],
+            B = S[(k + 1) % 4],
+            L = dist(A, B);
+          if (L < 1) continue;
+          const t =
+              ((sx - A[0]) * (B[0] - A[0]) + (sy - A[1]) * (B[1] - A[1])) /
+              (L * L),
+            px = A[0] + (B[0] - A[0]) * t,
+            py = A[1] + (B[1] - A[1]) * t,
+            d = Math.hypot(sx - px, sy - py);
+          const cornerGap = Math.min(0.2, R / L);
+          if (t > cornerGap && t < 1 - cornerGap && d < R * 0.8 && d < bd) {
+            bd = d;
+            best = h;
+          }
+        }
+        if (best) return best;
+        return inPoly([sx, sy], S) ? "move" : "pan";
+      }
+      function convexOk(q) {
+        let sign = 0;
+        for (let i = 0; i < 4; i++) {
+          const a = q[i],
+            b = q[(i + 1) % 4],
+            c = q[(i + 2) % 4];
+          const cr =
+            (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+          if (Math.abs(cr) < 1e-6) return false;
+          const s = Math.sign(cr);
+          if (sign && s !== sign) return false;
+          sign = s;
+        }
+        const minSide = Math.max(12, 0.02 * Math.min(ed.W, ed.H));
+        for (let i = 0; i < 4; i++)
+          if (dist(q[i], q[(i + 1) % 4]) < minSide) return false;
+        return true;
+      }
+      const clampPt = ([x, y]) => [
+        Math.min(ed.W, Math.max(0, x)),
+        Math.min(ed.H, Math.max(0, y)),
+      ];
+      function applyDrag(h, start, dx, dy) {
+        // dx,dy in image px from the drag start; returns the new quad or null
+        const q = start.map((v) => v.slice());
+        if (h in CORNER) {
+          const i = CORNER[h];
+          q[i] = clampPt([start[i][0] + dx, start[i][1] + dy]);
+        } else if (h in EDGE) {
+          const k = EDGE[h],
+            a = k,
+            b = (k + 1) % 4,
+            A = start[a],
+            B = start[b],
+            L = dist(A, B);
+          let nx = -(B[1] - A[1]) / L,
+            ny = (B[0] - A[0]) / L; // side normal
+          let d = dx * nx + dy * ny; // only the movement across the side counts
+          // keep both ends inside the image
+          let lo = -1e9,
+            hi = 1e9;
+          for (const P of [A, B]) {
+            for (const [c, nc, M] of [
+              [P[0], nx, ed.W],
+              [P[1], ny, ed.H],
+            ]) {
+              if (Math.abs(nc) < 1e-9) continue;
+              const t1 = (0 - c) / nc,
+                t2 = (M - c) / nc;
+              lo = Math.max(lo, Math.min(t1, t2));
+              hi = Math.min(hi, Math.max(t1, t2));
+            }
+          }
+          d = Math.min(hi, Math.max(lo, d));
+          q[a] = [A[0] + nx * d, A[1] + ny * d];
+          q[b] = [B[0] + nx * d, B[1] + ny * d];
+        } else if (h === "move") {
+          const xs = start.map((p) => p[0]),
+            ys = start.map((p) => p[1]);
+          dx = Math.min(ed.W - Math.max(...xs), Math.max(-Math.min(...xs), dx));
+          dy = Math.min(ed.H - Math.max(...ys), Math.max(-Math.min(...ys), dy));
+          for (let i = 0; i < 4; i++)
+            q[i] = [start[i][0] + dx, start[i][1] + dy];
+        }
+        return convexOk(q) ? q : null;
+      }
+      const CURSOR = {
+        move: "move",
+        pan: "grab",
+        tl: "nwse-resize",
+        br: "nwse-resize",
+        tr: "nesw-resize",
+        bl: "nesw-resize",
+        t: "ns-resize",
+        b: "ns-resize",
+        l: "ew-resize",
+        r: "ew-resize",
+      };
+      function edgeCursor(h) {
+        // follow the real direction of a tilted side
+        if (!(h in EDGE) && !(h in CORNER)) return CURSOR[h];
+        const p = handlePoint(h),
+          c = handlePoint("move");
+        let a = (Math.atan2(p[1] - c[1], p[0] - c[0]) * 180) / Math.PI;
+        a = (a + 360) % 180;
+        return a < 22.5 || a >= 157.5
+          ? "ew-resize"
+          : a < 67.5
+            ? "nwse-resize"
+            : a < 112.5
+              ? "ns-resize"
+              : "nesw-resize";
+      }
+      /* ---- pointer input: one finger/mouse = handle, move or pan; two fingers = pinch zoom + pan ---- */
+      const cvs = $("edCanvas");
+      function local(e) {
+        const r = cvs.getBoundingClientRect();
+        return [e.clientX - r.left, e.clientY - r.top];
+      }
+      cvs.addEventListener("pointerdown", (e) => {
+        if (!ed) return;
+        e.preventDefault();
+        ed.kbMode = false;
+        cvs.classList.remove("kb");
+        cvs.focus({ preventScroll: true });
+        cvs.setPointerCapture(e.pointerId);
+        const pt = local(e);
+        ed.ptrs.set(e.pointerId, pt);
+        if (ed.ptrs.size === 2) {
+          // second finger: switch to pinch, keep the crop where it is
+          ed.drag = null;
+          $("loupe").hidden = true;
+          hud("");
+          const [a, b] = [...ed.ptrs.values()];
+          ed.pinch = {
+            d0: Math.max(1, dist(a, b)),
+            m0: mid(a, b),
+            z0: ed.view.z,
+            ox0: ed.view.ox,
+            oy0: ed.view.oy,
+          };
+          draw();
+          return;
+        }
+        if (ed.ptrs.size > 2) return;
+        const h = hitTest(pt[0], pt[1], e.pointerType !== "mouse");
+        ed.drag = {
+          h,
+          start: ed.quad.map((v) => v.slice()),
+          p0: pt,
+          ox0: ed.view.ox,
+          oy0: ed.view.oy,
+          moved: false,
+          type: e.pointerType,
+        };
+        if (h !== "pan") ed.kb = h;
+        cvs.style.cursor = h === "pan" ? "grabbing" : edgeCursor(h);
+        draw();
+      });
+      cvs.addEventListener("pointermove", (e) => {
+        if (!ed) return;
+        const pt = local(e);
+        if (!ed.ptrs.has(e.pointerId)) {
+          // hover (mouse): show what a press would grab
+          const h = hitTest(pt[0], pt[1], false);
+          if (h !== ed.hover) {
+            ed.hover = h;
+            cvs.style.cursor = edgeCursor(h);
+            draw();
+          }
+          return;
+        }
+        ed.ptrs.set(e.pointerId, pt);
+        if (ed.pinch && ed.ptrs.size >= 2) {
+          const [a, b] = [...ed.ptrs.values()],
+            P = ed.pinch,
+            v = ed.view;
+          const z = Math.min(
+              v.max,
+              Math.max(v.min, (P.z0 * dist(a, b)) / P.d0),
+            ),
+            m = mid(a, b);
+          const ix = (P.m0[0] - P.ox0) / P.z0,
+            iy = (P.m0[1] - P.oy0) / P.z0; // image point that was under the fingers
+          v.z = z;
+          v.ox = m[0] - ix * z;
+          v.oy = m[1] - iy * z;
+          clampView();
+          updateZoomLabel();
+          draw();
+          return;
+        }
+        const D = ed.drag;
+        if (!D) return;
+        const sdx = pt[0] - D.p0[0],
+          sdy = pt[1] - D.p0[1];
+        if (!D.moved && Math.hypot(sdx, sdy) < (D.type === "mouse" ? 1 : 3))
+          return; // ignore finger jitter on press
+        D.moved = true;
+        if (D.h === "pan") {
+          ed.view.ox = D.ox0 + sdx;
+          ed.view.oy = D.oy0 + sdy;
+          clampView();
+          draw();
+          return;
+        }
+        const nq = applyDrag(D.h, D.start, sdx / ed.view.z, sdy / ed.view.z);
+        if (nq) ed.quad = nq;
+        draw();
+        schedulePreview();
+        showLoupe(pt);
+        hudSize();
+      });
+      function endPtr(e) {
+        if (!ed || !ed.ptrs.has(e.pointerId)) return;
+        ed.ptrs.delete(e.pointerId);
+        if (ed.pinch && ed.ptrs.size < 2) {
+          ed.pinch = null;
+          ed.drag = null;
+        } // lifting one finger of a pinch never starts a drag
+        if (!ed.ptrs.size) {
+          ed.drag = null;
+          $("loupe").hidden = true;
+          hud("");
+          cvs.style.cursor = ed.hover ? edgeCursor(ed.hover) : "";
+          placePip(null);
+          schedulePreview();
+          draw();
+        }
+      }
+      cvs.addEventListener("pointerup", endPtr);
+      cvs.addEventListener("pointercancel", endPtr);
+      cvs.addEventListener("pointerleave", () => {
+        if (ed && !ed.ptrs.size && ed.hover) {
+          ed.hover = null;
+          draw();
+        }
+      });
+      cvs.addEventListener(
+        "wheel",
+        (e) => {
+          if (!ed) return;
+          e.preventDefault();
+          const pt = local(e);
+          const f = Math.exp(
+            -(e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY) *
+              (e.ctrlKey ? 0.01 : 0.0018),
+          );
+          zoomAt(pt[0], pt[1], f, false);
+          draw();
+        },
+        { passive: false },
+      );
+      cvs.addEventListener("contextmenu", (e) => e.preventDefault());
+      /* keyboard: nudge the selected handle */
+      cvs.addEventListener("keydown", (e) => {
+        if (!ed) return;
+        const k = e.key;
+        if (
+          [
+            "[",
+            "]",
+            "ArrowLeft",
+            "ArrowRight",
+            "ArrowUp",
+            "ArrowDown",
+            "Tab",
+          ].includes(k)
+        ) {
+          ed.kbMode = true;
+          cvs.classList.add("kb");
+        }
+        if (k === "[" || k === "]") {
+          e.preventDefault();
+          const i = HANDLES.indexOf(ed.kb);
+          ed.kb =
+            HANDLES[
+              (i + (k === "]" ? 1 : HANDLES.length - 1)) % HANDLES.length
+            ];
+          hud(handleName(ed.kb));
+          setTimeout(() => hud(""), 900);
+          draw();
+          return;
+        }
+        if (k === "+" || k === "=") {
+          e.preventDefault();
+          zoomAt(ed.cw / 2, ed.ch / 2, 1.5, true);
+          return;
+        }
+        if (k === "-" || k === "_") {
+          e.preventDefault();
+          zoomAt(ed.cw / 2, ed.ch / 2, 1 / 1.5, true);
+          return;
+        }
+        if (k === "0") {
+          e.preventDefault();
+          fitView(true);
+          return;
+        }
+        const m = {
+          ArrowLeft: [-1, 0],
+          ArrowRight: [1, 0],
+          ArrowUp: [0, -1],
+          ArrowDown: [0, 1],
+        }[k];
+        if (!m) return;
+        e.preventDefault();
+        const step = (e.shiftKey ? 10 : 1) * Math.max(1, 1 / ed.view.z); // at least one screen pixel
+        const nq = applyDrag(ed.kb, ed.quad, m[0] * step, m[1] * step);
+        if (nq) {
+          ed.quad = nq;
+          draw();
+          schedulePreview();
+        }
+      });
+      function handleName(h) {
+        return {
+          move: "Whole crop",
+          tl: "Top-left corner",
+          t: "Top edge",
+          tr: "Top-right corner",
+          r: "Right edge",
+          br: "Bottom-right corner",
+          b: "Bottom edge",
+          bl: "Bottom-left corner",
+          l: "Left edge",
+        }[h];
+      }
+      $("zIn").onclick = () => {
+        zoomAt(ed.cw / 2, ed.ch / 2, 1.6, true);
+      };
+      $("zOut").onclick = () => {
+        zoomAt(ed.cw / 2, ed.ch / 2, 1 / 1.6, true);
+      };
+      $("zFit").onclick = () => fitView(true);
+      /* ---- drawing ---- */
+      function draw() {
+        if (!ed) return;
+        cancelAnimationFrame(ed.raf);
+        ed.raf = requestAnimationFrame(paint);
+      }
+      function paint() {
+        if (!ed) return;
+        const c = cvs,
+          x = c.getContext("2d"),
+          v = ed.view,
+          dpr = ed.dpr;
+        x.setTransform(dpr, 0, 0, dpr, 0, 0);
+        x.clearRect(0, 0, ed.cw, ed.ch);
+        x.imageSmoothingEnabled = true;
+        x.imageSmoothingQuality = v.z < 1 ? "high" : "medium";
+        x.save();
+        x.shadowColor = "rgba(0,0,0,.5)";
+        x.shadowBlur = 18;
+        x.fillStyle = "#000";
+        x.fillRect(v.ox, v.oy, ed.W * v.z, ed.H * v.z);
+        x.restore();
+        x.drawImage(ed.p.src, v.ox, v.oy, ed.W * v.z, ed.H * v.z);
+        const S = ed.quad.map(toS);
+        // dim everything outside the crop
+        x.beginPath();
+        x.rect(v.ox, v.oy, ed.W * v.z, ed.H * v.z);
+        x.moveTo(S[0][0], S[0][1]);
+        for (let i = 3; i >= 0; i--) x.lineTo(S[i][0], S[i][1]);
+        x.closePath();
+        x.fillStyle = "rgba(6,10,9,.62)";
+        x.fill("evenodd");
+        const active = ed.drag && ed.drag.moved ? ed.drag.h : null;
+        // rule-of-thirds guides while adjusting
+        if (active && active !== "pan") {
+          const mp = homography(S);
+          x.beginPath();
+          for (const t of [1 / 3, 2 / 3]) {
+            let a = mp(t, 0),
+              b = mp(t, 1);
+            x.moveTo(...a);
+            x.lineTo(...b);
+            a = mp(0, t);
+            b = mp(1, t);
+            x.moveTo(...a);
+            x.lineTo(...b);
+          }
+          x.strokeStyle = "rgba(255,255,255,.35)";
+          x.lineWidth = 1;
+          x.stroke();
+        }
+        // outline
+        x.beginPath();
+        S.forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p)));
+        x.closePath();
+        x.strokeStyle = "rgba(0,0,0,.55)";
+        x.lineWidth = 3;
+        x.stroke();
+        x.strokeStyle = "#fff";
+        x.lineWidth = 1.5;
+        x.stroke();
+        const touch = touchUI(),
+          focus = document.activeElement === cvs && ed.kbMode;
+        const hl = (h) =>
+          h === active ||
+          (!active && (h === ed.hover || (focus && h === ed.kb)));
+        // corners: L-shaped brackets along the two sides
+        for (const h of ["tl", "tr", "br", "bl"]) {
+          const i = CORNER[h],
+            P = S[i],
+            A = S[(i + 3) % 4],
+            B = S[(i + 1) % 4],
+            len = touch ? 20 : 16,
+            on = hl(h);
+          const ua = unit(P, A),
+            ub = unit(P, B);
+          x.lineCap = "round";
+          x.beginPath();
+          x.moveTo(P[0] + ua[0] * len, P[1] + ua[1] * len);
+          x.lineTo(P[0], P[1]);
+          x.lineTo(P[0] + ub[0] * len, P[1] + ub[1] * len);
+          x.strokeStyle = "rgba(0,0,0,.5)";
+          x.lineWidth = (on ? 7 : 6) + 2;
+          x.stroke();
+          x.strokeStyle = on ? "#5cc8ff" : "#fff";
+          x.lineWidth = on ? 7 : 5;
+          x.stroke();
+        }
+        // edges: short bars at the middle of each side
+        for (const h of ["t", "r", "b", "l"]) {
+          const k = EDGE[h],
+            A = S[k],
+            B = S[(k + 1) % 4],
+            M = mid(A, B),
+            u = unit(A, B),
+            len = touch ? 14 : 11,
+            on = hl(h);
+          x.beginPath();
+          x.moveTo(M[0] - u[0] * len, M[1] - u[1] * len);
+          x.lineTo(M[0] + u[0] * len, M[1] + u[1] * len);
+          x.lineCap = "round";
+          x.strokeStyle = "rgba(0,0,0,.5)";
+          x.lineWidth = (on ? 7 : 6) + 2;
+          x.stroke();
+          x.strokeStyle = on ? "#5cc8ff" : "#fff";
+          x.lineWidth = on ? 7 : 5;
+          x.stroke();
+        }
+        if (hl("move") && !active) {
+          const M = toS(handlePoint("move"));
+          x.beginPath();
+          x.arc(M[0], M[1], 14, 0, Math.PI * 2);
+          x.fillStyle = "rgba(92,200,255,.25)";
+          x.fill();
+          x.strokeStyle = "#5cc8ff";
+          x.lineWidth = 2;
+          x.stroke();
+        }
+      }
+      function unit(a, b) {
+        const L = dist(a, b) || 1;
+        return [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
+      }
+      /* ---- magnifier: what is under the finger, shown away from the finger ---- */
+      function corners() {
+        const pad = 10,
+          top = 48,
+          L = $("loupe").offsetWidth || 132;
+        return {
+          tl: [pad, top],
+          tr: [ed.cw - L - pad - (ed.cw < 600 ? 58 : 0), top],
+          bl: [pad, ed.ch - L - pad],
+          br: [ed.cw - L - pad - (ed.cw < 600 ? 58 : 0), ed.ch - L - pad],
+        };
+      }
+      function farthest(pt, exclude) {
+        const c = corners(),
+          L = $("loupe").offsetWidth || 132;
+        let best = null,
+          bd = -1;
+        for (const [k, p] of Object.entries(c)) {
+          if (k === exclude) continue;
+          const d = dist([p[0] + L / 2, p[1] + L / 2], pt);
+          if (d > bd) {
+            bd = d;
+            best = k;
+          }
+        }
+        return best;
+      }
+      function showLoupe(pt) {
+        const D = ed.drag;
+        if (!D || D.h === "pan" || D.h === "move") {
+          $("loupe").hidden = true;
+          placePip(pt);
+          return;
+        }
+        const lp = $("loupe");
+        lp.hidden = false;
+        const L = lp.offsetWidth,
+          dpr = ed.dpr;
+        if (lp.width !== Math.round(L * dpr)) {
+          lp.width = lp.height = Math.round(L * dpr);
+        }
+        const where = farthest(pt);
+        const pos = corners()[where];
+        lp.style.left = pos[0] + "px";
+        lp.style.top = pos[1] + "px";
+        placePip(pt, where);
+        const x = lp.getContext("2d");
+        x.setTransform(dpr, 0, 0, dpr, 0, 0);
+        x.clearRect(0, 0, L, L);
+        const P = handlePoint(D.h),
+          mag = Math.min(Math.max(ed.view.z * 3, ed.view.fit * 5), 8); // image px -> loupe px
+        x.save();
+        x.beginPath();
+        x.arc(L / 2, L / 2, L / 2, 0, Math.PI * 2);
+        x.clip();
+        x.fillStyle = "#111";
+        x.fillRect(0, 0, L, L);
+        x.imageSmoothingEnabled = mag < 2.5;
+        x.drawImage(
+          ed.p.src,
+          P[0] - L / 2 / mag,
+          P[1] - L / 2 / mag,
+          L / mag,
+          L / mag,
+          0,
+          0,
+          L,
+          L,
+        );
+        const T = (q) => [
+          (q[0] - P[0]) * mag + L / 2,
+          (q[1] - P[1]) * mag + L / 2,
+        ];
+        x.beginPath();
+        ed.quad.map(T).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p)));
+        x.closePath();
+        x.strokeStyle = "rgba(0,0,0,.6)";
+        x.lineWidth = 3;
+        x.stroke();
+        x.strokeStyle = "#5cc8ff";
+        x.lineWidth = 1.5;
+        x.stroke();
+        x.beginPath();
+        x.moveTo(L / 2 - 9, L / 2);
+        x.lineTo(L / 2 + 9, L / 2);
+        x.moveTo(L / 2, L / 2 - 9);
+        x.lineTo(L / 2, L / 2 + 9);
+        x.strokeStyle = "#fff";
+        x.lineWidth = 1;
+        x.stroke();
+        x.restore();
+      }
+      function placePip(pt, avoid) {
+        // phone: keep the result thumbnail in the corner farthest from the finger and the magnifier
+        const pip = $("pip");
+        if (getComputedStyle(pip).display === "none") return;
+        const w = pip.offsetWidth,
+          h = pip.offsetHeight,
+          pad = 10,
+          c = {
+            tl: [pad, pad],
+            tr: [ed.cw - w - pad - (ed.cw < 600 ? 58 : 0), pad],
+            bl: [pad, ed.ch - h - pad],
+            br: [ed.cw - w - pad - (ed.cw < 600 ? 58 : 0), ed.ch - h - pad],
+          };
+        let where = ed.pipAt || "tl";
+        if (pt) {
+          let bd = -1;
+          for (const [k, p] of Object.entries(c)) {
+            if (k === avoid) continue;
+            const d = dist([p[0] + w / 2, p[1] + h / 2], pt);
+            if (d > bd) {
+              bd = d;
+              where = k;
+            }
+          }
+        } else {
+          // at rest: a corner the crop does not cover
+          const S = ed.quad.map(toS);
+          let best = where,
+            bs = 1e9;
+          for (const [k, p] of Object.entries(c)) {
+            const box = [
+              [p[0], p[1]],
+              [p[0] + w, p[1]],
+              [p[0] + w, p[1] + h],
+              [p[0], p[1] + h],
+            ];
+            const hits =
+              box.filter((b) => inPoly(b, S)).length +
+              (S.some(
+                (s) =>
+                  s[0] > p[0] - 8 &&
+                  s[0] < p[0] + w + 8 &&
+                  s[1] > p[1] - 8 &&
+                  s[1] < p[1] + h + 8,
+              )
+                ? 2
+                : 0);
+            if (hits < bs) {
+              bs = hits;
+              best = k;
+            }
+          }
+          where = best;
+        }
+        ed.pipAt = where;
+        pip.style.left = c[where][0] + "px";
+        pip.style.top = c[where][1] + "px";
+      }
+      $("pip").onclick = () => {
+        $("pip").classList.toggle("big");
+        if (ed) requestAnimationFrame(() => placePip(null));
+      };
+      function hud(t) {
+        const el = $("hud");
+        el.textContent = t;
+        el.classList.toggle("on", !!t);
+      }
+      function hudSize() {
+        const [a, b] = quadSize(ed.quad);
+        const r = (ed.rot / 90) % 2 ? [b, a] : [a, b];
+        hud(
+          `${handleName(ed.drag.h)} · ${Math.round(r[0])} × ${Math.round(r[1])} px`,
+        );
+      }
+      /* ---- live result ---- */
+      function schedulePreview() {
+        if (!ed || ed.pv) return;
+        ed.pv = requestAnimationFrame(() => {
+          if (!ed) return;
+          ed.pv = 0;
+          const o = warp(
+            { src: ed.p.src, quad: ed.quad, rot: ed.rot, round: ed.round },
+            ed.drag ? 420 : 900,
+          );
+          for (const id of ["edOut", "edOutL"]) {
+            const oc = $(id);
+            oc.width = o.width;
+            oc.height = o.height;
+            oc.getContext("2d").drawImage(o, 0, 0);
+          }
+          const [a, b] = quadSize(ed.quad);
+          const r = (ed.rot / 90) % 2 ? [b, a] : [a, b];
+          $("edDims").textContent =
+            `${Math.round(r[0])} × ${Math.round(r[1])} px from the original image`;
+          if (!ed.drag) placePip(null);
+        });
+      }
+      /* ---- tools ---- */
+      $("edAuto").onclick = () => {
+        // nearest document found in this file
+        const objs = findObjects(ed.p.src).filter((o) => !o.blank);
+        if (!objs.length) {
+          hud("No document edges found");
+          setTimeout(() => hud(""), 1400);
+          return;
+        }
+        const cen = (q) => [
+          q.reduce((a, v) => a + v[0], 0) / 4,
+          q.reduce((a, v) => a + v[1], 0) / 4,
+        ];
+        const c0 = cen(ed.quad);
+        objs.sort((a, b) => dist(cen(a.q), c0) - dist(cen(b.q), c0));
+        ed.quad = objs[0].q.map((v) => v.slice());
+        draw();
+        schedulePreview();
+      };
+      $("edFull").onclick = () => {
+        ed.quad = fullQuad(ed.W, ed.H);
+        draw();
+        schedulePreview();
+      };
+      $("edRotL").onclick = () => {
+        ed.rot = (ed.rot + 270) % 360;
+        schedulePreview();
+      };
+      $("edRotR").onclick = () => {
+        ed.rot = (ed.rot + 90) % 360;
+        schedulePreview();
+      };
+      $("edRound").onchange = (e) => {
+        ed.round = e.target.checked;
+        $("edRoundL").classList.toggle("on", ed.round);
+        schedulePreview();
+      };
+      $("edCancel").onclick = closeEditor;
+      $("edOk").onclick = () => {
+        const p = ed.p;
+        p.quad = ed.quad.map((v) => v.slice());
+        p.rot = ed.rot;
+        p.round = ed.round;
+        p.inset = true;
+        p.whole = false;
+        p.sure = true;
+        p.ai = null;
+        p.out = warp(p);
+        const [a, b] = quadSize(p.quad);
+        p.native = Math.min(a, b);
+        p.sharp = sharpness(p.out, Math.max(a, b));
+        const W = p.src.width,
+          H = p.src.height,
+          t = 0.008;
+        const touch = p.quad.map(
+          ([x, y]) =>
+            x <= t * W || x >= W * (1 - t) || y <= t * H || y >= H * (1 - t),
+        );
+        p.edgeTouch = touch.some(Boolean) && !touch.every(Boolean);
+        closeEditor();
+        render();
+        scheduleOCR();
+      };
+      document.addEventListener("keydown", (e) => {
+        if (!ed) return;
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeEditor();
+        } else if (e.key === "Enter" && document.activeElement === cvs) {
+          e.preventDefault();
+          $("edOk").click();
+        }
+      });
+
+      /* ================= export ================= */
+      let statusTimer = 0;
+      function setStatus(t, tone) {
+        const s = $("status");
+        s.textContent = t || "";
+        s.className = "status" + (tone ? " " + tone : "");
+        clearTimeout(statusTimer);
+        if (tone === "ok")
+          statusTimer = setTimeout(() => {
+            if (s.textContent === t) setStatus("");
+          }, 7000);
+      }
+      async function saveFile(filename, blob, keepMsg) {
+        if (window.claude && typeof window.claude.use === "function") {
+          let dl = null;
+          try {
+            dl = await window.claude.use("downloads");
+          } catch (e) {}
+          if (dl) {
+            try {
+              await dl.save({ filename, data: blob });
+              if (!keepMsg) setStatus("Saved " + filename, "ok");
+              return true;
+            } catch (e) {
+              setStatus(
+                e && e.code === "declined"
+                  ? "Download cancelled."
+                  : "Could not save: " + ((e && e.message) || e),
+                e && e.code === "declined" ? "" : "bad",
+              );
+              return false;
+            }
+          }
+        }
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.append(a);
+        a.click();
+        a.remove();
+        const url = a.href;
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        if (!keepMsg) setStatus("Downloaded " + filename, "ok");
+        return true;
+      }
+      function makePDF() {
+        if (!placements().length) return null;
+        const fname = currentPdfName(),
+          nm = fname.replace(/\.pdf$/i, "");
+        if (!window.jspdf) {
+          setStatus(
+            "The PDF maker did not load. Check your internet connection and reload the page.",
+          );
+          return null;
+        }
+        const doc = new jspdf.jsPDF({
+          orientation: "landscape",
+          unit: "mm",
+          format: "a4",
+          compress: true,
+        });
+        doc.setProperties({ title: nm });
+        const k = 297 / PAGE.w;
+        for (const q of placements())
+          doc.addImage(
+            q.p.out.toDataURL("image/jpeg", 0.92),
+            "JPEG",
+            q.x * k,
+            q.y * k,
+            q.w * k,
+            q.h * k,
+            undefined,
+            "FAST",
+          );
+        return { name: fname, blob: doc.output("blob") };
+      }
+      $("dl").onclick = async () => {
+        setStatus("Making PDF…");
+        const f = makePDF();
+        if (f && (await saveFile(f.name, f.blob))) dirty = false;
+      };
+      $("share").onclick = async () => {
+        setStatus("Making PDF…");
+        const f = makePDF();
+        if (!f) return;
+        const file = new File([f.blob], f.name, { type: "application/pdf" });
+        // the phone's share sheet lists WhatsApp; pick it, then the chat
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: f.name });
+            setStatus("Shared " + f.name, "ok");
+            dirty = false;
+            return;
+          } catch (e) {
+            if (e && e.name === "AbortError") {
+              setStatus("Sharing cancelled.");
+              return;
+            }
+          }
+        }
+        const inClaude = !!(
+          window.claude && typeof window.claude.use === "function"
+        );
+        setStatus(
+          inClaude
+            ? "Sharing files is blocked inside claude.ai, so the PDF is being saved instead. In the Claude iPhone app, the save sheet lists WhatsApp. Otherwise attach the saved file in WhatsApp, or use the offline copy in Chrome or Safari on your phone to share in one tap."
+            : "This browser can't share files directly (desktop browsers usually can't), so the PDF is being saved. Attach it in WhatsApp, or open this page on your phone to share in one tap.",
+        );
+        if (await saveFile(f.name, f.blob, true)) dirty = false;
+      };
+      $("copy").onclick = async () => {
+        const t = $("note").textContent;
+        try {
+          await navigator.clipboard.writeText(t);
+          setStatus("Note copied");
+        } catch (e) {
+          const r = document.createRange();
+          r.selectNodeContents($("note"));
+          const s = getSelection();
+          s.removeAllRanges();
+          s.addRange(r);
+          setStatus("Note selected: press Ctrl+C (⌘C on Mac)");
+        }
+      };
+      function resetAll() {
+        $("nameSrc").textContent = "";
+        nameTyped = false;
+        items = [];
+        locked = [];
+        showPassword();
+        autoName = "";
+        $("name").value = "";
+        $("same").checked = false;
+        setStatus("");
+        if (sampleFn)
+          $("aiStatus").textContent =
+            "Reads the PAN name, checks each document is upright and readable, and compares names and dates of birth.";
+        render();
+        fileEdited = false;
+        dirty = false;
+        undo = null;
+        hideToast();
+        $("resetConfirm").hidden = true;
+        syncFileName();
+        setStatus("Cleared. Add the next person's documents.", "ok");
+        $("fileAll").focus();
+      }
+      $("reset").onclick = () => {
+        if (items.length && dirty) {
+          $("resetConfirm").hidden = false;
+          $("resetYes").focus();
+        } else resetAll();
+      };
+      $("resetYes").onclick = resetAll;
+      $("resetNo").onclick = () => {
+        $("resetConfirm").hidden = true;
+        $("reset").focus();
+      };
+      $("name").oninput = () => {
+        nameTyped = true;
+        renderChecks();
+      };
+      $("readAgain").onclick = () => {
+        const p = chosen("pan");
+        if (!p) {
+          $("nameSrc").textContent = "Add a PAN card first.";
+          return;
+        }
+        p.ocrKey = "";
+        ocrFailed = 0;
+        nameTyped = false;
+        autoName = $("name").value.trim() ? $("name").value : autoName;
+        scheduleOCR();
+      };
+      $("same").onchange = renderChecks;
+      const okType = (f) =>
+        /\.(jpe?g|png|webp|pdf)$/i.test(f.name) ||
+        /^image\/(jpeg|png|webp)$|^application\/pdf$/.test(f.type);
+      function takeFiles(list) {
+        const all = [...list],
+          good = all.filter(okType),
+          bad = all.length - good.length;
+        if (bad)
+          setStatus(
+            `${bad} file${bad > 1 ? "s" : ""} skipped: only JPG, PNG, WebP and PDF are supported.`,
+            "bad",
+          );
+        if (good.length) addFiles(good, "");
+      }
+      $("fileAll").onchange = (e) => {
+        takeFiles(e.target.files);
+        e.target.value = "";
+      };
+      const drop = $("drop");
+      ["dragenter", "dragover"].forEach((t) =>
+        drop.addEventListener(t, (e) => {
+          e.preventDefault();
+          drop.classList.add("over");
+        }),
+      );
+      ["dragleave", "drop"].forEach((t) =>
+        drop.addEventListener(t, (e) => {
+          e.preventDefault();
+          drop.classList.remove("over");
+        }),
+      );
+      drop.addEventListener("drop", (e) => takeFiles(e.dataTransfer.files));
+      document.addEventListener("paste", (e) => {
+        const f = [...(e.clipboardData?.files || [])];
+        if (f.length) takeFiles(f);
+      });
+      render();
+    </script>
+  </body>
+</html>
