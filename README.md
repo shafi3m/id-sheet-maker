@@ -108,7 +108,3 @@ Suggestions, bug reports, and improvements are welcome.
 5. Open a pull request describing your changes.
 
 Please avoid committing real identity documents, personal information, API credentials, or other sensitive files.
-
-## License
-
-No license is currently specified. Add a `LICENSE` file before presenting this project as open source or granting reuse rights.
